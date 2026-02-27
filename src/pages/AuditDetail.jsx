@@ -127,7 +127,9 @@ export default function AuditDetail() {
       fetchAnalysis();
     } catch (err) {
       const status = err.response?.status;
-      const msg = status === 429
+      const msg = status === 409
+        ? err.response?.data?.message || 'Hay un análisis en curso. Espere a que termine antes de iniciar otro.'
+        : status === 429
         ? err.response?.data?.message || 'Límite de Gemini alcanzado. Espere 1-2 minutos e inténtelo de nuevo.'
         : err.response?.data?.message || 'Error al analizar la llamada';
       setAnalyzeError(msg);
