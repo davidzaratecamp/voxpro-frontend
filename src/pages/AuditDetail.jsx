@@ -117,7 +117,7 @@ export default function AuditDetail() {
     setAnalyzing(true);
     setAnalyzeError('');
     try {
-      const res = await client.post(`/audit/selections/${id}/analyze`, {}, { timeout: 120000 });
+      const res = await client.post(`/audit/selections/${id}/analyze`, {}, { timeout: 300000 });
       const data = res.data.data;
       // Update local state with AI results
       setScore(String(data.score));
