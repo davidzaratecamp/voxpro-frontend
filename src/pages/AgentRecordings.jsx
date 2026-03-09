@@ -77,19 +77,27 @@ export default function AgentRecordings() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {recordings.map((rec, i) => {
-                    const audited = !!rec.selection_id;
+                    const completed = rec.selection_status === 'completed';
+                    const inProgress = rec.selection_id && !completed;
                     return (
-                    <tr key={rec.id} className={`transition-colors ${audited ? 'bg-emerald-50 hover:bg-emerald-100' : 'hover:bg-slate-50'}`}>
+                    <tr key={rec.id} className={`transition-colors ${completed ? 'bg-emerald-50 hover:bg-emerald-100' : 'hover:bg-slate-50'}`}>
                       <td className="px-5 py-3 text-slate-400 text-xs">{i + 1}</td>
                       <td className="px-5 py-3 font-semibold text-slate-800">{formatDuration(rec.call_duration)}</td>
                       <td className="px-5 py-3 text-slate-600">{rec.call_phone || '—'}</td>
-                      <td className="px-5 py-3 text-right">
-                        {audited ? (
+                      <td className="px-5 py-3 w-px whitespace-nowrap">
+                        {completed ? (
                           <button
                             onClick={() => navigate(`/audit/${rec.selection_id}`)}
                             className="inline-flex items-center gap-1.5 bg-emerald-600 text-white rounded-lg px-4 py-1.5 text-xs font-medium hover:bg-emerald-700 transition-colors"
                           >
                             Ver auditoría
+                          </button>
+                        ) : inProgress ? (
+                          <button
+                            onClick={() => navigate(`/audit/${rec.selection_id}`)}
+                            className="inline-flex items-center gap-1.5 bg-amber-500 text-white rounded-lg px-4 py-1.5 text-xs font-medium hover:bg-amber-600 transition-colors"
+                          >
+                            Continuar
                           </button>
                         ) : (
                           <button
