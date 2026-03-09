@@ -35,6 +35,11 @@ export default function AgentRecordings() {
     }
   };
 
+  // Stats derived from recordings
+  const totalDuration = recordings ? recordings.reduce((sum, r) => sum + (r.call_duration || 0), 0) : 0;
+  const auditedCount = recordings ? recordings.filter((r) => r.selection_status === 'completed').length : 0;
+  const avgDuration = recordings && recordings.length > 0 ? Math.round(totalDuration / recordings.length) : 0;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -50,81 +55,109 @@ export default function AgentRecordings() {
         <div>
           <h2 className="text-2xl font-bold text-slate-800">{agentName || agentId}</h2>
           <p className="text-sm text-slate-500 mt-0.5">
-            Grabaciones del {date ? formatDate(date) : date} · {agentId}
+            {date ? formatDate(date) : date} · {agentId}
           </p>
         </div>
       </div>
 
-      {/* Recordings table */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 max-w-5xl">
-        {loading ? (
-          <div className="flex justify-center py-16">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      <div className="max-w-5xl space-y-4">
+        {/* Stats banner */}
+        {!loading && recordings && recordings.length > 0 && (
+          <div className="grid grid-cols-4 gap-4">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-5 py-4">
+              <p className="text-xs text-slate-500 uppercase tracking-wider font-medium mb-1">Llamadas</p>
+              <p className="text-3xl font-bold text-slate-800">{recordings.length}</p>
+              <p className="text-xs text-slate-400 mt-1">grabaciones del día</p>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-5 py-4">
+              <p className="text-xs text-slate-500 uppercase tracking-wider font-medium mb-1">Tiempo total</p>
+              <p className="text-3xl font-bold text-slate-800">{formatDuration(totalDuration)}</p>
+              <p className="text-xs text-slate-400 mt-1">en llamadas</p>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-5 py-4">
+              <p className="text-xs text-slate-500 uppercase tracking-wider font-medium mb-1">Promedio</p>
+              <p className="text-3xl font-bold text-slate-800">{formatDuration(avgDuration)}</p>
+              <p className="text-xs text-slate-400 mt-1">por llamada</p>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-5 py-4">
+              <p className="text-xs text-slate-500 uppercase tracking-wider font-medium mb-1">Auditadas</p>
+              <p className="text-3xl font-bold text-emerald-600">{auditedCount}</p>
+              <p className="text-xs text-slate-400 mt-1">de {recordings.length} grabaciones</p>
+            </div>
           </div>
-        ) : !recordings || recordings.length === 0 ? (
-          <p className="px-5 py-16 text-center text-slate-400">No hay grabaciones disponibles para esta fecha</p>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-100">
-                    <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">#</th>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Duración</th>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Teléfono</th>
-                    <th className="px-5 py-3" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {recordings.map((rec, i) => {
-                    const completed = rec.selection_status === 'completed';
-                    const inProgress = rec.selection_id && !completed;
-                    return (
-                      <tr key={rec.id} className={`transition-colors ${completed ? 'bg-emerald-50 hover:bg-emerald-100' : 'hover:bg-slate-50'}`}>
-                        <td className="px-5 py-3 text-slate-400 text-xs">{i + 1}</td>
-                        <td className="px-5 py-3 font-semibold text-slate-800">{formatDuration(rec.call_duration)}</td>
-                        <td className="px-5 py-3 text-slate-600">{rec.call_phone || '—'}</td>
-                        <td className="px-5 py-3 w-px whitespace-nowrap">
-                          {completed ? (
-                            <button
-                              onClick={() => navigate(`/audit/${rec.selection_id}`)}
-                              className="inline-flex items-center gap-1.5 bg-emerald-600 text-white rounded-lg px-4 py-1.5 text-xs font-medium hover:bg-emerald-700 transition-colors"
-                            >
-                              Auditada
-                            </button>
-                          ) : inProgress ? (
-                            <button
-                              onClick={() => navigate(`/audit/${rec.selection_id}`)}
-                              className="inline-flex items-center gap-1.5 bg-amber-500 text-white rounded-lg px-4 py-1.5 text-xs font-medium hover:bg-amber-600 transition-colors"
-                            >
-                              Continuar
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleAudit(rec)}
-                              disabled={selectingId === rec.id}
-                              className="inline-flex items-center gap-1.5 bg-blue-600 text-white rounded-lg px-4 py-1.5 text-xs font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                            >
-                              {selectingId === rec.id ? (
-                                <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                                </svg>
-                              ) : 'Auditar'}
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <div className="px-5 py-3 border-t border-slate-100 text-xs text-slate-500">
-              {recordings.length} {recordings.length === 1 ? 'grabación' : 'grabaciones'}
-            </div>
-          </>
         )}
+
+        {/* Recordings table */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+          {loading ? (
+            <div className="flex justify-center py-16">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+            </div>
+          ) : !recordings || recordings.length === 0 ? (
+            <p className="px-5 py-16 text-center text-slate-400">No hay grabaciones disponibles para esta fecha</p>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-100">
+                      <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">#</th>
+                      <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Duración</th>
+                      <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Teléfono</th>
+                      <th className="px-5 py-3" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {recordings.map((rec, i) => {
+                      const completed = rec.selection_status === 'completed';
+                      const inProgress = rec.selection_id && !completed;
+                      return (
+                        <tr key={rec.id} className={`transition-colors ${completed ? 'bg-emerald-50 hover:bg-emerald-100' : 'hover:bg-slate-50'}`}>
+                          <td className="px-5 py-3 text-slate-400 text-xs">{i + 1}</td>
+                          <td className="px-5 py-3 font-semibold text-slate-800">{formatDuration(rec.call_duration)}</td>
+                          <td className="px-5 py-3 text-slate-600">{rec.call_phone || '—'}</td>
+                          <td className="px-5 py-3 w-px whitespace-nowrap">
+                            {completed ? (
+                              <button
+                                onClick={() => navigate(`/audit/${rec.selection_id}`)}
+                                className="inline-flex items-center gap-1.5 bg-emerald-600 text-white rounded-lg px-4 py-1.5 text-xs font-medium hover:bg-emerald-700 transition-colors"
+                              >
+                                Auditada
+                              </button>
+                            ) : inProgress ? (
+                              <button
+                                onClick={() => navigate(`/audit/${rec.selection_id}`)}
+                                className="inline-flex items-center gap-1.5 bg-amber-500 text-white rounded-lg px-4 py-1.5 text-xs font-medium hover:bg-amber-600 transition-colors"
+                              >
+                                Continuar
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleAudit(rec)}
+                                disabled={selectingId === rec.id}
+                                className="inline-flex items-center gap-1.5 bg-blue-600 text-white rounded-lg px-4 py-1.5 text-xs font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                              >
+                                {selectingId === rec.id ? (
+                                  <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                  </svg>
+                                ) : 'Auditar'}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="px-5 py-3 border-t border-slate-100 text-xs text-slate-500">
+                {recordings.length} {recordings.length === 1 ? 'grabación' : 'grabaciones'}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
