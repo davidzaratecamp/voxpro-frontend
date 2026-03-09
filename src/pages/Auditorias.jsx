@@ -109,7 +109,7 @@ export default function Auditorias() {
     try {
       const res = await client.post('/scan/daily', { date: scanDate }, { timeout: 120000 });
       const { agents, date: returnedDate } = res.data.data;
-      const list = agents || [];
+      const list = (agents || []).sort((a, b) => b.recording_count - a.recording_count);
       const d = returnedDate || scanDate;
       setScannedAgents(list);
       setScannedDate(d);
@@ -353,7 +353,7 @@ export default function Auditorias() {
               <thead>
                 <tr className="border-b border-slate-100">
                   <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Agente</th>
-                  <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Grabaciones</th>
+                  <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Llamadas</th>
                   <th className="px-5 py-3" />
                 </tr>
               </thead>
@@ -372,7 +372,7 @@ export default function Auditorias() {
                     </td>
                     <td className="px-5 py-3">
                       <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
-                        {agent.recording_count} grabaciones
+                        {agent.recording_count} llamadas
                       </span>
                     </td>
                     <td className="px-5 py-3 text-right">
@@ -384,80 +384,6 @@ export default function Auditorias() {
                 ))}
               </tbody>
             </table>
-          )}
-        </div>
-      )}
-
-      {/* Audit selections table */}
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-        </div>
-      ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Agente</th>
-                  <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Cliente</th>
-                  <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Duración</th>
-                  <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Fecha</th>
-                  <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Estado</th>
-                  <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Score</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {!filtered || filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-5 py-12 text-center text-slate-400">
-                      {search ? 'No se encontraron resultados para la búsqueda' : 'No hay auditorías para esta semana'}
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map((sel) => (
-                    <tr
-                      key={sel.id}
-                      onClick={() => navigate(`/audit/${sel.id}`)}
-                      className="hover:bg-slate-50 cursor-pointer transition-colors"
-                    >
-                      <td className="px-5 py-3">
-                        <div>
-                          <span className="text-slate-800 font-medium">{sel.agent_name || sel.agent_id}</span>
-                          {sel.agent_name && (
-                            <span className="block text-xs text-slate-400">{sel.agent_id}</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3 text-slate-600">
-                        <span>{CLIENT_LABELS[sel.client_code] || sel.client_code}</span>
-                        {sel.campaign_type && (
-                          <span className={`ml-1.5 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                            sel.campaign_type === 'customer'
-                              ? 'bg-purple-50 text-purple-700'
-                              : 'bg-cyan-50 text-cyan-700'
-                          }`}>
-                            {CAMPAIGN_LABELS[sel.campaign_type]}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3 text-slate-600">{formatDuration(sel.call_duration)}</td>
-                      <td className="px-5 py-3 text-slate-600">{formatDate(sel.file_date)}</td>
-                      <td className="px-5 py-3"><StatusBadge status={sel.status} /></td>
-                      <td className="px-5 py-3 text-slate-600">{sel.score != null ? sel.score : '—'}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-          {filtered && filtered.length > 0 && (
-            <div className="px-5 py-3 border-t border-slate-100 text-xs text-slate-500">
-              {filtered.length} {filtered.length === 1 ? 'resultado' : 'resultados'}
-              {search && selections && filtered.length !== selections.length && (
-                <span> de {selections.length} total</span>
-              )}
-            </div>
           )}
         </div>
       )}
