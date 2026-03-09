@@ -66,7 +66,7 @@ export default function AgentRecordings() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="text-sm">
                 <thead>
                   <tr className="border-b border-slate-100">
                     <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">#</th>
