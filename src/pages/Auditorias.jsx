@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import client from '../api/client';
 import StatusBadge from '../components/StatusBadge';
-import { formatDuration, formatDate, getMonday, CLIENT_LABELS, CAMPAIGN_LABELS } from '../lib/utils';
+import { formatDuration, formatDate, formatFileSize, getMonday, CLIENT_LABELS, CAMPAIGN_LABELS } from '../lib/utils';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Todos los estados' },
@@ -31,12 +31,22 @@ export default function Auditorias() {
 
   // Scan state
   const [scanning, setScanning] = useState(false);
-  const [scanResult, setScanResult] = useState(null);
   const [scanDate, setScanDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 1);
     return d.toISOString().slice(0, 10);
   });
+
+  // Agents panel state (shown after scan)
+  const [scannedAgents, setScannedAgents] = useState(null);
+  const [scannedDate, setScannedDate] = useState(null);
+  const [scanError, setScanError] = useState(null);
+
+  // Agent recordings modal state
+  const [selectedAgent, setSelectedAgent] = useState(null);
+  const [agentRecordings, setAgentRecordings] = useState(null);
+  const [loadingRecordings, setLoadingRecordings] = useState(false);
+  const [selectingId, setSelectingId] = useState(null);
 
   // Sync filters to URL query params
   useEffect(() => {
@@ -84,7 +94,6 @@ export default function Auditorias() {
     return d.toISOString().slice(0, 10);
   })();
 
-  // Generate week days for date filter
   const weekDays = (() => {
     const days = [];
     const start = new Date(weekStart + 'T00:00:00');
@@ -98,26 +107,59 @@ export default function Auditorias() {
 
   const handleScan = async () => {
     setScanning(true);
-    setScanResult(null);
+    setScannedAgents(null);
+    setScanError(null);
     try {
       const res = await client.post('/scan/daily', { date: scanDate }, { timeout: 120000 });
-      setScanResult(res.data.data);
-      fetchData();
+      const { agents, date: returnedDate } = res.data.data;
+      setScannedAgents(agents || []);
+      setScannedDate(returnedDate || scanDate);
     } catch (err) {
       console.error('Error scanning:', err);
-      setScanResult({ error: err.response?.data?.message || 'Error al escanear' });
+      setScanError(err.response?.data?.message || 'Error al escanear');
     } finally {
       setScanning(false);
     }
   };
 
-  // Client options from user's client_codes
+  const handleAgentClick = async (agent) => {
+    setSelectedAgent(agent);
+    setAgentRecordings(null);
+    setLoadingRecordings(true);
+    try {
+      const res = await client.get('/recordings/by-agent', {
+        params: { agent_id: agent.agent_id, date: scannedDate },
+      });
+      setAgentRecordings(res.data.data);
+    } catch (err) {
+      console.error('Error loading recordings:', err);
+      setAgentRecordings([]);
+    } finally {
+      setLoadingRecordings(false);
+    }
+  };
+
+  const handleSelectRecording = async (recording) => {
+    setSelectingId(recording.id);
+    try {
+      const res = await client.post('/audit/select-one', { recording_id: recording.id });
+      const selectionId = res.data.data.id;
+      setSelectedAgent(null);
+      setAgentRecordings(null);
+      fetchData();
+      navigate(`/audit/${selectionId}`);
+    } catch (err) {
+      console.error('Error selecting recording:', err);
+    } finally {
+      setSelectingId(null);
+    }
+  };
+
   const clientOptions = (user?.client_codes || []).map((code) => ({
     value: code,
     label: CLIENT_LABELS[code] || code,
   }));
 
-  // Client-side agent search
   const filtered = selections?.filter((sel) => {
     if (!search) return true;
     const q = search.toLowerCase();
@@ -126,7 +168,6 @@ export default function Auditorias() {
     return name.includes(q) || id.includes(q);
   });
 
-  // Counts for status summary
   const counts = selections
     ? {
         total: selections.length,
@@ -169,7 +210,6 @@ export default function Auditorias() {
       {/* Filters bar */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
         <div className="flex flex-col sm:flex-row gap-3">
-          {/* Search */}
           <div className="relative flex-1">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
               <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
@@ -185,20 +225,16 @@ export default function Auditorias() {
             />
           </div>
 
-          {/* Status filter */}
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all"
           >
             {STATUS_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
 
-          {/* Client filter */}
           {clientOptions.length > 1 && (
             <select
               value={clientFilter}
@@ -207,14 +243,11 @@ export default function Auditorias() {
             >
               <option value="">Todos los clientes</option>
               {clientOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
           )}
 
-          {/* Campaign type filter (Ventas/Customer) — solo para Obama y LV */}
           {(user?.client_codes || []).some((c) => c === 'obama' || c === 'lv') && (
             <select
               value={campaignFilter}
@@ -238,9 +271,7 @@ export default function Auditorias() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
             </svg>
           </button>
-          <span className="text-sm font-medium text-slate-700">
-            {weekStart} — {weekEnd}
-          </span>
+          <span className="text-sm font-medium text-slate-700">{weekStart} — {weekEnd}</span>
           <button
             onClick={() => changeWeek(1)}
             className="text-sm text-slate-600 hover:text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 transition-colors hover:bg-slate-100"
@@ -288,20 +319,9 @@ export default function Auditorias() {
           </div>
         </div>
 
-        {/* Scan result */}
-        {scanResult && (
-          <div className={`mt-3 rounded-lg px-3 py-2 text-xs ${scanResult.error ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
-            {scanResult.error ? scanResult.error : (() => {
-              const codes = user?.client_codes || [];
-              const breakdown = scanResult.audit?.breakdown || {};
-              const mySelected = codes.reduce((sum, c) => sum + (breakdown[c]?.selected || 0), 0);
-              const myAvailable = codes.reduce((sum, c) => sum + (breakdown[c]?.available || 0), 0);
-              if (mySelected === 0 && myAvailable === 0) {
-                return <>No se encontraron grabaciones disponibles para auditar en esta fecha</>;
-              }
-              return <>{mySelected} {mySelected === 1 ? 'auditoría seleccionada' : 'auditorías seleccionadas'}</>;
-            })()}
-          </div>
+        {/* Scan error */}
+        {scanError && (
+          <div className="mt-3 rounded-lg px-3 py-2 text-xs bg-red-50 text-red-700">{scanError}</div>
         )}
 
         {/* Day filter */}
@@ -332,7 +352,70 @@ export default function Auditorias() {
         </div>
       </div>
 
-      {/* Table */}
+      {/* Agents panel — shown after scan */}
+      {scannedAgents !== null && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+            <div>
+              <span className="text-sm font-semibold text-slate-800">
+                Agentes con grabaciones — {scannedDate}
+              </span>
+              <span className="ml-2 text-xs text-slate-500">{scannedAgents.length} agentes</span>
+            </div>
+            <button
+              onClick={() => { setScannedAgents(null); setScannedDate(null); }}
+              className="text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          {scannedAgents.length === 0 ? (
+            <p className="px-5 py-8 text-center text-sm text-slate-400">
+              No se encontraron grabaciones para esta fecha
+            </p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100">
+                  <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Agente</th>
+                  <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Grabaciones</th>
+                  <th className="px-5 py-3" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {scannedAgents.map((agent) => (
+                  <tr
+                    key={agent.agent_id}
+                    onClick={() => handleAgentClick(agent)}
+                    className="hover:bg-slate-50 cursor-pointer transition-colors"
+                  >
+                    <td className="px-5 py-3">
+                      <span className="font-medium text-slate-800">{agent.agent_name || agent.agent_id}</span>
+                      {agent.agent_name && (
+                        <span className="block text-xs text-slate-400">{agent.agent_id}</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3">
+                      <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                        {agent.recording_count} grabaciones
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      <svg className="w-4 h-4 text-slate-400 inline" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                      </svg>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {/* Audit selections table */}
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
@@ -355,9 +438,7 @@ export default function Auditorias() {
                 {!filtered || filtered.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-5 py-12 text-center text-slate-400">
-                      {search
-                        ? 'No se encontraron resultados para la búsqueda'
-                        : 'No hay auditorías para esta semana'}
+                      {search ? 'No se encontraron resultados para la búsqueda' : 'No hay auditorías para esta semana'}
                     </td>
                   </tr>
                 ) : (
@@ -405,6 +486,77 @@ export default function Auditorias() {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Agent recordings modal */}
+      {selectedAgent && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) { setSelectedAgent(null); setAgentRecordings(null); } }}
+        >
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+            {/* Modal header */}
+            <div className="flex items-start justify-between px-5 py-4 border-b border-slate-100">
+              <div>
+                <h3 className="font-semibold text-slate-800">{selectedAgent.agent_name || selectedAgent.agent_id}</h3>
+                <p className="text-xs text-slate-500 mt-0.5">{selectedAgent.agent_id} · {scannedDate}</p>
+              </div>
+              <button
+                onClick={() => { setSelectedAgent(null); setAgentRecordings(null); }}
+                className="text-slate-400 hover:text-slate-600 transition-colors ml-4"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal body */}
+            <div className="overflow-y-auto flex-1">
+              {loadingRecordings ? (
+                <div className="flex justify-center py-12">
+                  <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-blue-600" />
+                </div>
+              ) : !agentRecordings || agentRecordings.length === 0 ? (
+                <p className="px-5 py-10 text-center text-sm text-slate-400">No hay grabaciones disponibles</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-100 bg-slate-50">
+                      <th className="text-left px-5 py-2.5 text-xs font-medium text-slate-500 uppercase tracking-wider">Duración</th>
+                      <th className="text-left px-5 py-2.5 text-xs font-medium text-slate-500 uppercase tracking-wider">Teléfono</th>
+                      <th className="text-left px-5 py-2.5 text-xs font-medium text-slate-500 uppercase tracking-wider">Tamaño</th>
+                      <th className="px-5 py-2.5" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {agentRecordings.map((rec) => (
+                      <tr key={rec.id} className="hover:bg-slate-50">
+                        <td className="px-5 py-3 font-medium text-slate-800">{formatDuration(rec.call_duration)}</td>
+                        <td className="px-5 py-3 text-slate-600">{rec.call_phone || '—'}</td>
+                        <td className="px-5 py-3 text-slate-500 text-xs">{formatFileSize(rec.file_size)}</td>
+                        <td className="px-5 py-3 text-right">
+                          <button
+                            onClick={() => handleSelectRecording(rec)}
+                            disabled={selectingId === rec.id}
+                            className="inline-flex items-center gap-1.5 bg-blue-600 text-white rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                          >
+                            {selectingId === rec.id ? (
+                              <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                              </svg>
+                            ) : 'Auditar'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
