@@ -60,7 +60,7 @@ export default function AgentRecordings() {
         </div>
       </div>
 
-      <div className="max-w-5xl space-y-4">
+      <div className="space-y-4">
         {/* Stats banner */}
         {!loading && recordings && recordings.length > 0 && (
           <div className="grid grid-cols-4 gap-4">
