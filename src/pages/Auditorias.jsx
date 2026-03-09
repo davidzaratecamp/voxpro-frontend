@@ -37,14 +37,10 @@ export default function Auditorias() {
     return d.toISOString().slice(0, 10);
   });
 
-  // Agents panel state (shown after scan, persisted in sessionStorage)
-  const [scannedAgents, setScannedAgents] = useState(() => {
-    try {
-      const agents = JSON.parse(sessionStorage.getItem('vp_agents')) || null;
-      return agents ? [...agents].sort((a, b) => b.recording_count - a.recording_count) : null;
-    } catch { return null; }
+  // Agents panel state — keyed by date { "2026-03-05": [...agents] }
+  const [scannedByDate, setScannedByDate] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem('vp_scans')) || {}; } catch { return {}; }
   });
-  const [scannedDate, setScannedDate] = useState(() => sessionStorage.getItem('vp_agents_date') || null);
   const [scanError, setScanError] = useState(null);
 
 
@@ -107,17 +103,18 @@ export default function Auditorias() {
 
   const handleScan = async () => {
     setScanning(true);
-    setScannedAgents(null);
     setScanError(null);
     try {
       const res = await client.post('/scan/daily', { date: scanDate }, { timeout: 120000 });
       const { agents, date: returnedDate } = res.data.data;
-      const list = (agents || []).sort((a, b) => b.recording_count - a.recording_count);
       const d = returnedDate || scanDate;
-      setScannedAgents(list);
-      setScannedDate(d);
-      sessionStorage.setItem('vp_agents', JSON.stringify(list));
-      sessionStorage.setItem('vp_agents_date', d);
+      const list = (agents || []).sort((a, b) => b.recording_count - a.recording_count);
+      setScannedByDate((prev) => {
+        const updated = { ...prev, [d]: list };
+        sessionStorage.setItem('vp_scans', JSON.stringify(updated));
+        return updated;
+      });
+      setDateFilter(d);
     } catch (err) {
       console.error('Error scanning:', err);
       setScanError(err.response?.data?.message || 'Error al escanear');
@@ -126,8 +123,8 @@ export default function Auditorias() {
     }
   };
 
-  const handleAgentClick = (agent) => {
-    const params = new URLSearchParams({ date: scannedDate, name: agent.agent_name || '' });
+  const handleAgentClick = (agent, date) => {
+    const params = new URLSearchParams({ date, name: agent.agent_name || '' });
     navigate(`/agent-recordings/${agent.agent_id}?${params.toString()}`);
   };
 
@@ -328,18 +325,25 @@ export default function Auditorias() {
         </div>
       </div>
 
-      {/* Agents panel — shown after scan */}
-      {scannedAgents !== null && (!dateFilter || dateFilter === scannedDate) && (
+      {/* Agents panel — shown for the selected day if scanned */}
+      {dateFilter && scannedByDate[dateFilter] && (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200">
           <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
             <div>
               <span className="text-sm font-semibold text-slate-800">
-                Agentes con grabaciones — {scannedDate}
+                Agentes con grabaciones — {dateFilter}
               </span>
-              <span className="ml-2 text-xs text-slate-500">{scannedAgents.length} agentes</span>
+              <span className="ml-2 text-xs text-slate-500">{scannedByDate[dateFilter].length} agentes</span>
             </div>
             <button
-              onClick={() => { setScannedAgents(null); setScannedDate(null); sessionStorage.removeItem('vp_agents'); sessionStorage.removeItem('vp_agents_date'); }}
+              onClick={() => {
+                setScannedByDate((prev) => {
+                  const updated = { ...prev };
+                  delete updated[dateFilter];
+                  sessionStorage.setItem('vp_scans', JSON.stringify(updated));
+                  return updated;
+                });
+              }}
               className="text-slate-400 hover:text-slate-600 transition-colors"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
@@ -347,7 +351,7 @@ export default function Auditorias() {
               </svg>
             </button>
           </div>
-          {scannedAgents.length === 0 ? (
+          {scannedByDate[dateFilter].length === 0 ? (
             <p className="px-5 py-8 text-center text-sm text-slate-400">
               No se encontraron grabaciones para esta fecha
             </p>
@@ -361,10 +365,10 @@ export default function Auditorias() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {scannedAgents.map((agent) => (
+                {scannedByDate[dateFilter].map((agent) => (
                   <tr
                     key={agent.agent_id}
-                    onClick={() => handleAgentClick(agent)}
+                    onClick={() => handleAgentClick(agent, dateFilter)}
                     className="hover:bg-slate-50 cursor-pointer transition-colors"
                   >
                     <td className="px-5 py-3">
