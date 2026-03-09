@@ -80,41 +80,41 @@ export default function AgentRecordings() {
                     const completed = rec.selection_status === 'completed';
                     const inProgress = rec.selection_id && !completed;
                     return (
-                    <tr key={rec.id} className={`transition-colors ${completed ? 'bg-emerald-50 hover:bg-emerald-100' : 'hover:bg-slate-50'}`}>
-                      <td className="px-5 py-3 text-slate-400 text-xs">{i + 1}</td>
-                      <td className="px-5 py-3 font-semibold text-slate-800">{formatDuration(rec.call_duration)}</td>
-                      <td className="px-5 py-3 text-slate-600">{rec.call_phone || '—'}</td>
-                      <td className="px-5 py-3 w-px whitespace-nowrap">
-                        {completed ? (
-                          <button
-                            onClick={() => navigate(`/audit/${rec.selection_id}`)}
-                            className="inline-flex items-center gap-1.5 bg-emerald-600 text-white rounded-lg px-4 py-1.5 text-xs font-medium hover:bg-emerald-700 transition-colors"
-                          >
-                            Ver auditoría
-                          </button>
-                        ) : inProgress ? (
-                          <button
-                            onClick={() => navigate(`/audit/${rec.selection_id}`)}
-                            className="inline-flex items-center gap-1.5 bg-amber-500 text-white rounded-lg px-4 py-1.5 text-xs font-medium hover:bg-amber-600 transition-colors"
-                          >
-                            Continuar
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleAudit(rec)}
-                            disabled={selectingId === rec.id}
-                            className="inline-flex items-center gap-1.5 bg-blue-600 text-white rounded-lg px-4 py-1.5 text-xs font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                          >
-                            {selectingId === rec.id ? (
-                              <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                              </svg>
-                            ) : 'Auditar'}
-                          </button>
-                        )}
-                      </td>
-                    </tr>
+                      <tr key={rec.id} className={`transition-colors ${completed ? 'bg-emerald-50 hover:bg-emerald-100' : 'hover:bg-slate-50'}`}>
+                        <td className="px-5 py-3 text-slate-400 text-xs">{i + 1}</td>
+                        <td className="px-5 py-3 font-semibold text-slate-800">{formatDuration(rec.call_duration)}</td>
+                        <td className="px-5 py-3 text-slate-600">{rec.call_phone || '—'}</td>
+                        <td className="px-5 py-3 w-px whitespace-nowrap">
+                          {completed ? (
+                            <button
+                              onClick={() => navigate(`/audit/${rec.selection_id}`)}
+                              className="inline-flex items-center gap-1.5 bg-emerald-600 text-white rounded-lg px-4 py-1.5 text-xs font-medium hover:bg-emerald-700 transition-colors"
+                            >
+                              Auditada
+                            </button>
+                          ) : inProgress ? (
+                            <button
+                              onClick={() => navigate(`/audit/${rec.selection_id}`)}
+                              className="inline-flex items-center gap-1.5 bg-amber-500 text-white rounded-lg px-4 py-1.5 text-xs font-medium hover:bg-amber-600 transition-colors"
+                            >
+                              Continuar
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleAudit(rec)}
+                              disabled={selectingId === rec.id}
+                              className="inline-flex items-center gap-1.5 bg-blue-600 text-white rounded-lg px-4 py-1.5 text-xs font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                            >
+                              {selectingId === rec.id ? (
+                                <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                </svg>
+                              ) : 'Auditar'}
+                            </button>
+                          )}
+                        </td>
+                      </tr>
                     );
                   })}
                 </tbody>
