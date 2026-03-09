@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import client from '../api/client';
 import StatusBadge from '../components/StatusBadge';
-import { formatDuration, formatDate, formatFileSize, getMonday, CLIENT_LABELS, CAMPAIGN_LABELS } from '../lib/utils';
+import { formatDuration, formatDate, getMonday, CLIENT_LABELS, CAMPAIGN_LABELS } from '../lib/utils';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Todos los estados' },
@@ -42,11 +42,6 @@ export default function Auditorias() {
   const [scannedDate, setScannedDate] = useState(null);
   const [scanError, setScanError] = useState(null);
 
-  // Agent recordings modal state
-  const [selectedAgent, setSelectedAgent] = useState(null);
-  const [agentRecordings, setAgentRecordings] = useState(null);
-  const [loadingRecordings, setLoadingRecordings] = useState(false);
-  const [selectingId, setSelectingId] = useState(null);
 
   // Sync filters to URL query params
   useEffect(() => {
@@ -122,37 +117,9 @@ export default function Auditorias() {
     }
   };
 
-  const handleAgentClick = async (agent) => {
-    setSelectedAgent(agent);
-    setAgentRecordings(null);
-    setLoadingRecordings(true);
-    try {
-      const res = await client.get('/recordings/by-agent', {
-        params: { agent_id: agent.agent_id, date: scannedDate },
-      });
-      setAgentRecordings(res.data.data);
-    } catch (err) {
-      console.error('Error loading recordings:', err);
-      setAgentRecordings([]);
-    } finally {
-      setLoadingRecordings(false);
-    }
-  };
-
-  const handleSelectRecording = async (recording) => {
-    setSelectingId(recording.id);
-    try {
-      const res = await client.post('/audit/select-one', { recording_id: recording.id });
-      const selectionId = res.data.data.id;
-      setSelectedAgent(null);
-      setAgentRecordings(null);
-      fetchData();
-      navigate(`/audit/${selectionId}`);
-    } catch (err) {
-      console.error('Error selecting recording:', err);
-    } finally {
-      setSelectingId(null);
-    }
+  const handleAgentClick = (agent) => {
+    const params = new URLSearchParams({ date: scannedDate, name: agent.agent_name || '' });
+    navigate(`/agent-recordings/${agent.agent_id}?${params.toString()}`);
   };
 
   const clientOptions = (user?.client_codes || []).map((code) => ({
@@ -489,76 +456,6 @@ export default function Auditorias() {
         </div>
       )}
 
-      {/* Agent recordings modal */}
-      {selectedAgent && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          onClick={(e) => { if (e.target === e.currentTarget) { setSelectedAgent(null); setAgentRecordings(null); } }}
-        >
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
-            {/* Modal header */}
-            <div className="flex items-start justify-between px-5 py-4 border-b border-slate-100">
-              <div>
-                <h3 className="font-semibold text-slate-800">{selectedAgent.agent_name || selectedAgent.agent_id}</h3>
-                <p className="text-xs text-slate-500 mt-0.5">{selectedAgent.agent_id} · {scannedDate}</p>
-              </div>
-              <button
-                onClick={() => { setSelectedAgent(null); setAgentRecordings(null); }}
-                className="text-slate-400 hover:text-slate-600 transition-colors ml-4"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Modal body */}
-            <div className="overflow-y-auto flex-1">
-              {loadingRecordings ? (
-                <div className="flex justify-center py-12">
-                  <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-blue-600" />
-                </div>
-              ) : !agentRecordings || agentRecordings.length === 0 ? (
-                <p className="px-5 py-10 text-center text-sm text-slate-400">No hay grabaciones disponibles</p>
-              ) : (
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-100 bg-slate-50">
-                      <th className="text-left px-5 py-2.5 text-xs font-medium text-slate-500 uppercase tracking-wider">Duración</th>
-                      <th className="text-left px-5 py-2.5 text-xs font-medium text-slate-500 uppercase tracking-wider">Teléfono</th>
-                      <th className="text-left px-5 py-2.5 text-xs font-medium text-slate-500 uppercase tracking-wider">Tamaño</th>
-                      <th className="px-5 py-2.5" />
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {agentRecordings.map((rec) => (
-                      <tr key={rec.id} className="hover:bg-slate-50">
-                        <td className="px-5 py-3 font-medium text-slate-800">{formatDuration(rec.call_duration)}</td>
-                        <td className="px-5 py-3 text-slate-600">{rec.call_phone || '—'}</td>
-                        <td className="px-5 py-3 text-slate-500 text-xs">{formatFileSize(rec.file_size)}</td>
-                        <td className="px-5 py-3 text-right">
-                          <button
-                            onClick={() => handleSelectRecording(rec)}
-                            disabled={selectingId === rec.id}
-                            className="inline-flex items-center gap-1.5 bg-blue-600 text-white rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                          >
-                            {selectingId === rec.id ? (
-                              <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                              </svg>
-                            ) : 'Auditar'}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
