@@ -39,7 +39,10 @@ export default function Auditorias() {
 
   // Agents panel state (shown after scan, persisted in sessionStorage)
   const [scannedAgents, setScannedAgents] = useState(() => {
-    try { return JSON.parse(sessionStorage.getItem('vp_agents')) || null; } catch { return null; }
+    try {
+      const agents = JSON.parse(sessionStorage.getItem('vp_agents')) || null;
+      return agents ? [...agents].sort((a, b) => b.recording_count - a.recording_count) : null;
+    } catch { return null; }
   });
   const [scannedDate, setScannedDate] = useState(() => sessionStorage.getItem('vp_agents_date') || null);
   const [scanError, setScanError] = useState(null);
