@@ -56,7 +56,7 @@ export default function AgentRecordings() {
       </div>
 
       {/* Recordings table */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 max-w-2xl mx-auto">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 max-w-xl">
         {loading ? (
           <div className="flex justify-center py-16">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
