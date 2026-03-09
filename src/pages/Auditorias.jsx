@@ -37,9 +37,11 @@ export default function Auditorias() {
     return d.toISOString().slice(0, 10);
   });
 
-  // Agents panel state (shown after scan)
-  const [scannedAgents, setScannedAgents] = useState(null);
-  const [scannedDate, setScannedDate] = useState(null);
+  // Agents panel state (shown after scan, persisted in sessionStorage)
+  const [scannedAgents, setScannedAgents] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem('vp_agents')) || null; } catch { return null; }
+  });
+  const [scannedDate, setScannedDate] = useState(() => sessionStorage.getItem('vp_agents_date') || null);
   const [scanError, setScanError] = useState(null);
 
 
@@ -107,8 +109,12 @@ export default function Auditorias() {
     try {
       const res = await client.post('/scan/daily', { date: scanDate }, { timeout: 120000 });
       const { agents, date: returnedDate } = res.data.data;
-      setScannedAgents(agents || []);
-      setScannedDate(returnedDate || scanDate);
+      const list = agents || [];
+      const d = returnedDate || scanDate;
+      setScannedAgents(list);
+      setScannedDate(d);
+      sessionStorage.setItem('vp_agents', JSON.stringify(list));
+      sessionStorage.setItem('vp_agents_date', d);
     } catch (err) {
       console.error('Error scanning:', err);
       setScanError(err.response?.data?.message || 'Error al escanear');
@@ -330,7 +336,7 @@ export default function Auditorias() {
               <span className="ml-2 text-xs text-slate-500">{scannedAgents.length} agentes</span>
             </div>
             <button
-              onClick={() => { setScannedAgents(null); setScannedDate(null); }}
+              onClick={() => { setScannedAgents(null); setScannedDate(null); sessionStorage.removeItem('vp_agents'); sessionStorage.removeItem('vp_agents_date'); }}
               className="text-slate-400 hover:text-slate-600 transition-colors"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
