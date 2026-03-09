@@ -56,7 +56,7 @@ export default function AgentRecordings() {
       </div>
 
       {/* Recordings table */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 max-w-lg">
         {loading ? (
           <div className="flex justify-center py-16">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
@@ -66,7 +66,7 @@ export default function AgentRecordings() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="text-sm">
+              <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-100">
                     <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">#</th>
