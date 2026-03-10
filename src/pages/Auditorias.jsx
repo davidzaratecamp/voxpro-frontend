@@ -317,15 +317,24 @@ export default function Auditorias() {
           {weekDays.map((day) => {
             const d = new Date(day + 'T00:00:00');
             const label = d.toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric' });
+            const isActive = dateFilter === day;
+            const isScanned = !!scannedByDate[day];
             return (
               <button
                 key={day}
                 onClick={() => setDateFilter(dateFilter === day ? '' : day)}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors capitalize ${
-                  dateFilter === day ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+                className={`relative px-2.5 py-1 rounded-md text-xs font-medium transition-colors capitalize ${
+                  isActive
+                    ? 'bg-blue-600 text-white'
+                    : isScanned
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                    : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
                 {label}
+                {isScanned && !isActive && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400" />
+                )}
               </button>
             );
           })}
