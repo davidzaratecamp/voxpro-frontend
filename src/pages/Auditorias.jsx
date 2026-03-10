@@ -41,11 +41,11 @@ export default function Auditorias() {
   const [scannedByDate, setScannedByDate] = useState({});
   const [scanError, setScanError] = useState(null);
 
-  // Load scan data from sessionStorage once user is available (keyed by user ID)
+  // Load scan data from localStorage once user is available (keyed by user ID)
   useEffect(() => {
     if (!user?.id) return;
     try {
-      const stored = JSON.parse(sessionStorage.getItem(`vp_scans_${user.id}`)) || {};
+      const stored = JSON.parse(localStorage.getItem(`vp_scans_${user.id}`)) || {};
       setScannedByDate(stored);
     } catch { /* ignore */ }
   }, [user?.id]);
@@ -118,7 +118,7 @@ export default function Auditorias() {
       const list = (agents || []).sort((a, b) => b.recording_count - a.recording_count);
       setScannedByDate((prev) => {
         const updated = { ...prev, [d]: list };
-        sessionStorage.setItem(`vp_scans_${user.id}`, JSON.stringify(updated));
+        localStorage.setItem(`vp_scans_${user.id}`, JSON.stringify(updated));
         return updated;
       });
       setDateFilter(d);
@@ -347,7 +347,7 @@ export default function Auditorias() {
                 setScannedByDate((prev) => {
                   const updated = { ...prev };
                   delete updated[dateFilter];
-                  sessionStorage.setItem(`vp_scans_${user.id}`, JSON.stringify(updated));
+                  localStorage.setItem(`vp_scans_${user.id}`, JSON.stringify(updated));
                   return updated;
                 });
               }}
