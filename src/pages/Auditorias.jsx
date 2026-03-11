@@ -41,14 +41,31 @@ export default function Auditorias() {
   const [scannedByDate, setScannedByDate] = useState({});
   const [scanError, setScanError] = useState(null);
 
-  // Load scan data from localStorage once user is available (keyed by user ID)
+  // Load scan data: merge localStorage cache + server DB (source of truth)
   useEffect(() => {
     if (!user?.id) return;
+    let localData = {};
     try {
-      const stored = JSON.parse(localStorage.getItem(`vp_scans_${user.id}`)) || {};
-      setScannedByDate(stored);
+      localData = JSON.parse(localStorage.getItem(`vp_scans_${user.id}`)) || {};
     } catch { /* ignore */ }
-  }, [user?.id]);
+    setScannedByDate(localData);
+
+    // Fetch from server to get data scanned by any user/device
+    client.get('/scan/week-agents', { params: { week_start: weekStart } })
+      .then((res) => {
+        const serverData = res.data.data || {};
+        setScannedByDate((prev) => {
+          // Merge: server overrides local for dates that exist server-side
+          const merged = { ...prev };
+          for (const [date, agents] of Object.entries(serverData)) {
+            if (agents.length > 0) merged[date] = agents;
+          }
+          localStorage.setItem(`vp_scans_${user.id}`, JSON.stringify(merged));
+          return merged;
+        });
+      })
+      .catch(() => { /* silently ignore, localStorage still works */ });
+  }, [user?.id, weekStart]);
 
 
   // Sync filters to URL query params
@@ -117,7 +134,12 @@ export default function Auditorias() {
       const d = returnedDate || scanDate;
       const list = (agents || []).sort((a, b) => b.recording_count - a.recording_count);
       setScannedByDate((prev) => {
-        const updated = { ...prev, [d]: list };
+        const updated = { ...prev };
+        if (list.length > 0) {
+          updated[d] = list;
+        } else {
+          delete updated[d]; // no resaltar si no hay agentes
+        }
         localStorage.setItem(`vp_scans_${user.id}`, JSON.stringify(updated));
         return updated;
       });
@@ -318,7 +340,7 @@ export default function Auditorias() {
             const d = new Date(day + 'T00:00:00');
             const label = d.toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric' });
             const isActive = dateFilter === day;
-            const isScanned = !!scannedByDate[day];
+            const isScanned = (scannedByDate[day]?.length ?? 0) > 0;
             return (
               <button
                 key={day}
