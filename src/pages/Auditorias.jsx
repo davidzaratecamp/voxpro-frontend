@@ -41,31 +41,14 @@ export default function Auditorias() {
   const [scannedByDate, setScannedByDate] = useState({});
   const [scanError, setScanError] = useState(null);
 
-  // Load scan data: merge localStorage cache + server DB (source of truth)
+  // Load scan data from localStorage only — days appear when manually scanned
   useEffect(() => {
     if (!user?.id) return;
-    let localData = {};
     try {
-      localData = JSON.parse(localStorage.getItem(`vp_scans_${user.id}`)) || {};
+      const localData = JSON.parse(localStorage.getItem(`vp_scans_${user.id}`)) || {};
+      setScannedByDate(localData);
     } catch { /* ignore */ }
-    setScannedByDate(localData);
-
-    // Fetch from server to get data scanned by any user/device
-    client.get('/scan/week-agents', { params: { week_start: weekStart } })
-      .then((res) => {
-        const serverData = res.data.data || {};
-        setScannedByDate((prev) => {
-          // Merge: server overrides local for dates that exist server-side
-          const merged = { ...prev };
-          for (const [date, agents] of Object.entries(serverData)) {
-            if (agents.length > 0) merged[date] = agents;
-          }
-          localStorage.setItem(`vp_scans_${user.id}`, JSON.stringify(merged));
-          return merged;
-        });
-      })
-      .catch(() => { /* silently ignore, localStorage still works */ });
-  }, [user?.id, weekStart]);
+  }, [user?.id]);
 
 
   // Sync filters to URL query params
