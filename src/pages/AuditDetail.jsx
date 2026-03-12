@@ -28,6 +28,7 @@ export default function AuditDetail() {
   const [analysis, setAnalysis] = useState(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [reanalyzing, setReanalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState('');
 
   // Audio player state
@@ -119,11 +120,9 @@ export default function AuditDetail() {
     try {
       const res = await client.post(`/audit/selections/${id}/analyze`, {}, { timeout: 300000 });
       const data = res.data.data;
-      // Update local state with AI results
       setScore(String(data.score));
       setNotes(data.summary);
       setStatus('completed');
-      // Reload analysis
       fetchAnalysis();
     } catch (err) {
       const status = err.response?.status;
@@ -136,6 +135,26 @@ export default function AuditDetail() {
       console.error('Error analyzing:', err);
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  const handleReanalyze = async () => {
+    if (!window.confirm('¿Seguro que quieres re-auditar? Esto borrará el análisis actual y generará uno nuevo desde cero.')) return;
+    setReanalyzing(true);
+    setAnalyzeError('');
+    try {
+      const res = await client.post(`/audit/selections/${id}/reanalyze`, {}, { timeout: 300000 });
+      const data = res.data.data;
+      setScore(String(data.score));
+      setNotes(data.summary);
+      setStatus('completed');
+      fetchAnalysis();
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Error al re-analizar la llamada';
+      setAnalyzeError(msg);
+      console.error('Error reanalyzing:', err);
+    } finally {
+      setReanalyzing(false);
     }
   };
 
@@ -250,7 +269,31 @@ export default function AuditDetail() {
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-5">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-slate-800">Análisis con IA</h3>
-          {!analysis && !analysisLoading && (
+          {analysis && analysis.criteria && !analysisLoading && (
+            <button
+              onClick={handleReanalyze}
+              disabled={reanalyzing || analyzing}
+              className="inline-flex items-center gap-2 bg-amber-500 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 disabled:opacity-50 transition-colors"
+            >
+              {reanalyzing ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Re-auditando...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                  </svg>
+                  Re-auditar
+                </>
+              )}
+            </button>
+          )}
+          {(!analysis || !analysis.criteria) && !analysisLoading && (
             <button
               onClick={handleAnalyze}
               disabled={analyzing}
@@ -285,13 +328,13 @@ export default function AuditDetail() {
           </div>
         )}
 
-        {analyzing && (
+        {(analyzing || reanalyzing) && (
           <div className="flex flex-col items-center py-8 text-slate-500 gap-3">
             <svg className="animate-spin h-8 w-8 text-blue-600" viewBox="0 0 24 24" fill="none">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
-            <p className="text-sm">Descargando audio y analizando con Gemini...</p>
+            <p className="text-sm">{reanalyzing ? 'Borrando análisis anterior y re-auditando con Gemini...' : 'Descargando audio y analizando con Gemini...'}</p>
             <p className="text-xs text-slate-400">Esto puede tomar 30-60 segundos</p>
           </div>
         )}
@@ -302,11 +345,11 @@ export default function AuditDetail() {
           </div>
         )}
 
-        {analysis && !analyzing && (
+        {analysis && analysis.criteria && !analyzing && (
           <AnalysisResults analysis={analysis} selectionId={id} onScoreUpdate={(s) => setScore(String(s))} onSeek={audioUrl ? seekAudio : null} />
         )}
 
-        {!analysis && !analysisLoading && !analyzing && (
+        {(!analysis || !analysis.criteria) && !analysisLoading && !analyzing && (
           <p className="text-sm text-slate-400 py-4 text-center">
             No se ha realizado análisis con IA para esta auditoría.
           </p>
