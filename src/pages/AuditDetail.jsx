@@ -129,8 +129,8 @@ export default function AuditDetail() {
       const msg = status === 409
         ? err.response?.data?.message || 'Hay un análisis en curso. Espere a que termine antes de iniciar otro.'
         : status === 429
-        ? err.response?.data?.message || 'Límite de Gemini alcanzado. Espere 1-2 minutos e inténtelo de nuevo.'
-        : err.response?.data?.message || 'Error al analizar la llamada';
+          ? err.response?.data?.message || 'Límite de Gemini alcanzado. Espere 1-2 minutos e inténtelo de nuevo.'
+          : err.response?.data?.message || 'Error al analizar la llamada';
       setAnalyzeError(msg);
       console.error('Error analyzing:', err);
     } finally {
@@ -203,11 +203,10 @@ export default function AuditDetail() {
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="text-sm text-slate-800 font-medium">{CLIENT_LABELS[selection.client_code] || selection.client_code}</span>
               {selection.campaign_type && (
-                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                  selection.campaign_type === 'customer'
+                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${selection.campaign_type === 'customer'
                     ? 'bg-purple-50 text-purple-700'
                     : 'bg-cyan-50 text-cyan-700'
-                }`}>
+                  }`}>
                   {CAMPAIGN_LABELS[selection.campaign_type]}
                 </span>
               )}
@@ -269,6 +268,14 @@ export default function AuditDetail() {
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-5">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-slate-800">Análisis con IA</h3>
+
+
+
+
+
+
+
+          {/*BORRAR DESDE AQUI*/}
           {analysis && analysis.criteria && !analysisLoading && (
             <button
               onClick={handleReanalyze}
@@ -293,6 +300,15 @@ export default function AuditDetail() {
               )}
             </button>
           )}
+          {/*Hasta aquí =(cuando se requira)*/}
+
+
+
+
+
+
+
+
           {(!analysis || !analysis.criteria) && !analysisLoading && (
             <button
               onClick={handleAnalyze}
@@ -369,8 +385,8 @@ export default function AuditDetail() {
                 key={s}
                 onClick={() => setStatus(s)}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${status === s
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'
                   }`}
               >
                 {STATUS_LABELS[s]}
@@ -627,8 +643,8 @@ function AnalysisResults({ analysis, selectionId, onScoreUpdate, onSeek }) {
             <button
               onClick={() => setEditingGeneral(!editingGeneral)}
               className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors ${editingGeneral
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+                ? 'bg-blue-100 text-blue-700'
+                : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
                 }`}
             >
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
@@ -858,11 +874,10 @@ function HangupInfo({ hangupBy }) {
   return (
     <div>
       <p className="text-xs text-slate-500">Colgó</p>
-      <span className={`inline-flex items-center gap-1 mt-0.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-        isCaller
+      <span className={`inline-flex items-center gap-1 mt-0.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${isCaller
           ? 'bg-emerald-50 text-emerald-700'
           : 'bg-red-50 text-red-700'
-      }`}>
+        }`}>
         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d={
             isCaller
