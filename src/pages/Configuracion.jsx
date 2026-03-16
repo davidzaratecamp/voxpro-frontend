@@ -1,11 +1,23 @@
 import { useState, useEffect, useCallback } from 'react';
 import { criteriaApi } from '../api/criteria';
+import { useAuth } from '../context/AuthContext';
 
 const GROUPS = [
   { key: 'claro', label: 'Claro', campaigns: ['claro_wcb', 'claro_hogar', 'claro_tyt'] },
   { key: 'obama', label: 'Obama', campaigns: ['obama_ventas', 'obama_customer'] },
   { key: 'lv',    label: 'Vital', campaigns: ['lv_ventas', 'lv_customer'] },
 ];
+
+// Qué client_code necesita cada campaña para ser visible
+const CAMPAIGN_CLIENT = {
+  claro_wcb:      'claro_wcb',
+  claro_hogar:    'claro_hogar',
+  claro_tyt:      'claro_tyt',
+  obama_ventas:   'obama',
+  obama_customer: 'obama',
+  lv_ventas:      'lv',
+  lv_customer:    'lv',
+};
 
 const NA_RULE_LABELS = {
   third_party:  'Tercero (no titular)',
@@ -320,7 +332,17 @@ function CampaignEditor({ campaignKey, config, saving, success, error, onChange,
 // ─── Configuracion (page) ────────────────────────────────────────────────────
 
 export default function Configuracion() {
-  const [activeGroup, setActiveGroup] = useState('claro');
+  const { user } = useAuth();
+
+  // Grupos y campañas filtrados según los client_codes del usuario
+  const allowedGroups = GROUPS
+    .map((g) => ({
+      ...g,
+      campaigns: g.campaigns.filter((c) => (user?.client_codes || []).includes(CAMPAIGN_CLIENT[c])),
+    }))
+    .filter((g) => g.campaigns.length > 0);
+
+  const [activeGroup, setActiveGroup] = useState(() => allowedGroups[0]?.key || '');
   const [configs, setConfigs] = useState({});
   const [loadError, setLoadError] = useState(null);
   const [saving, setSaving] = useState({});
@@ -368,7 +390,7 @@ export default function Configuracion() {
     }
   }, [configs]);
 
-  const currentGroup = GROUPS.find((g) => g.key === activeGroup);
+  const currentGroup = allowedGroups.find((g) => g.key === activeGroup);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -385,7 +407,7 @@ export default function Configuracion() {
 
       {/* Group tabs */}
       <div className="flex gap-1 border-b border-slate-200">
-        {GROUPS.map((g) => (
+        {allowedGroups.map((g) => (
           <button
             key={g.key}
             onClick={() => setActiveGroup(g.key)}
