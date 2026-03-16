@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Fragment } from 'react';
 import { criteriaApi } from '../api/criteria';
 import { useAuth } from '../context/AuthContext';
 
@@ -29,6 +29,7 @@ const NA_RULE_LABELS = {
 // ─── GeneralCriteriaTable ───────────────────────────────────────────────────
 
 function GeneralCriteriaTable({ general, onChange }) {
+  const [expanded, setExpanded] = useState(new Set());
   const total = general.reduce((s, c) => s + (Number(c.weight) || 0), 0);
 
   function updateRow(idx, field, value) {
@@ -39,11 +40,20 @@ function GeneralCriteriaTable({ general, onChange }) {
   }
 
   function addRow() {
-    onChange([...general, { key: '', label: '', weight: 0 }]);
+    onChange([...general, { key: '', label: '', weight: 0, description: '' }]);
   }
 
   function removeRow(idx) {
+    setExpanded((prev) => { const s = new Set(prev); s.delete(idx); return s; });
     onChange(general.filter((_, i) => i !== idx));
+  }
+
+  function toggleExpand(idx) {
+    setExpanded((prev) => {
+      const s = new Set(prev);
+      s.has(idx) ? s.delete(idx) : s.add(idx);
+      return s;
+    });
   }
 
   return (
@@ -54,59 +64,85 @@ function GeneralCriteriaTable({ general, onChange }) {
           Total: {total}%
         </span>
       </div>
-      <div className="overflow-x-auto rounded-lg border border-slate-200">
+      <div className="rounded-lg border border-slate-200 overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
             <tr>
               <th className="px-3 py-2 text-left font-medium">Key</th>
               <th className="px-3 py-2 text-left font-medium">Etiqueta</th>
               <th className="px-3 py-2 text-right font-medium w-20">Peso %</th>
-              <th className="px-2 py-2 w-8"></th>
+              <th className="px-2 py-2 w-7"></th>
+              <th className="px-2 py-2 w-7"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody>
             {general.map((c, i) => (
-              <tr key={i} className="bg-white hover:bg-slate-50">
-                <td className="px-3 py-1.5">
-                  <input
-                    type="text"
-                    value={c.key}
-                    onChange={(e) => updateRow(i, 'key', e.target.value)}
-                    className="w-full text-xs font-mono bg-transparent border-0 outline-none focus:ring-1 focus:ring-blue-400 rounded px-1 py-0.5"
-                    placeholder="key_criterio"
-                  />
-                </td>
-                <td className="px-3 py-1.5">
-                  <input
-                    type="text"
-                    value={c.label}
-                    onChange={(e) => updateRow(i, 'label', e.target.value)}
-                    className="w-full bg-transparent border-0 outline-none focus:ring-1 focus:ring-blue-400 rounded px-1 py-0.5"
-                    placeholder="Nombre del criterio"
-                  />
-                </td>
-                <td className="px-3 py-1.5">
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={c.weight}
-                    onChange={(e) => updateRow(i, 'weight', e.target.value)}
-                    className="w-full text-right bg-transparent border-0 outline-none focus:ring-1 focus:ring-blue-400 rounded px-1 py-0.5"
-                  />
-                </td>
-                <td className="px-2 py-1.5">
-                  <button
-                    onClick={() => removeRow(i)}
-                    className="text-slate-300 hover:text-red-400 transition-colors"
-                    title="Eliminar fila"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </td>
-              </tr>
+              <Fragment key={i}>
+                <tr className={`border-t border-slate-100 hover:bg-slate-50 ${expanded.has(i) ? 'bg-blue-50/40' : 'bg-white'}`}>
+                  <td className="px-3 py-1.5">
+                    <input
+                      type="text"
+                      value={c.key}
+                      onChange={(e) => updateRow(i, 'key', e.target.value)}
+                      className="w-full text-xs font-mono bg-transparent border-0 outline-none focus:ring-1 focus:ring-blue-400 rounded px-1 py-0.5"
+                      placeholder="key_criterio"
+                    />
+                  </td>
+                  <td className="px-3 py-1.5">
+                    <input
+                      type="text"
+                      value={c.label}
+                      onChange={(e) => updateRow(i, 'label', e.target.value)}
+                      className="w-full bg-transparent border-0 outline-none focus:ring-1 focus:ring-blue-400 rounded px-1 py-0.5"
+                      placeholder="Nombre del criterio"
+                    />
+                  </td>
+                  <td className="px-3 py-1.5">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={c.weight}
+                      onChange={(e) => updateRow(i, 'weight', e.target.value)}
+                      className="w-full text-right bg-transparent border-0 outline-none focus:ring-1 focus:ring-blue-400 rounded px-1 py-0.5"
+                    />
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <button
+                      onClick={() => toggleExpand(i)}
+                      title={expanded.has(i) ? 'Ocultar descripción' : 'Editar descripción'}
+                      className={`transition-colors ${c.description?.trim() ? 'text-blue-400 hover:text-blue-600' : 'text-slate-300 hover:text-slate-500'}`}
+                    >
+                      <svg className={`w-3.5 h-3.5 transition-transform ${expanded.has(i) ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                      </svg>
+                    </button>
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <button onClick={() => removeRow(i)} className="text-slate-300 hover:text-red-400 transition-colors">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+                {expanded.has(i) && (
+                  <tr className="bg-blue-50/30 border-t border-blue-100">
+                    <td colSpan={5} className="px-4 py-2">
+                      <label className="block text-xs text-slate-500 mb-1">
+                        Descripción para la IA — ¿cómo debe evaluar este criterio?
+                      </label>
+                      <textarea
+                        value={c.description || ''}
+                        onChange={(e) => updateRow(i, 'description', e.target.value)}
+                        rows={3}
+                        placeholder="Ej: El agente debe confirmar verbalmente la aceptación del cliente antes de proceder al contrato. Si el cliente no dio un 'sí' explícito, no cumple."
+                        className="w-full text-sm border border-blue-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-blue-400 resize-y bg-white"
+                      />
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             ))}
           </tbody>
         </table>
@@ -129,6 +165,7 @@ function GeneralCriteriaTable({ general, onChange }) {
 function HighImpactList({ highImpact, onChange }) {
   const [newKey, setNewKey] = useState('');
   const [newLabel, setNewLabel] = useState('');
+  const [expanded, setExpanded] = useState(new Set());
 
   function updateRow(idx, field, value) {
     const next = highImpact.map((c, i) => (i === idx ? { ...c, [field]: value } : c));
@@ -137,13 +174,22 @@ function HighImpactList({ highImpact, onChange }) {
 
   function addRow() {
     if (!newKey.trim()) return;
-    onChange([...highImpact, { key: newKey.trim(), label: newLabel.trim() }]);
+    onChange([...highImpact, { key: newKey.trim(), label: newLabel.trim(), description: '' }]);
     setNewKey('');
     setNewLabel('');
   }
 
   function removeRow(idx) {
+    setExpanded((prev) => { const s = new Set(prev); s.delete(idx); return s; });
     onChange(highImpact.filter((_, i) => i !== idx));
+  }
+
+  function toggleExpand(idx) {
+    setExpanded((prev) => {
+      const s = new Set(prev);
+      s.has(idx) ? s.delete(idx) : s.add(idx);
+      return s;
+    });
   }
 
   return (
@@ -151,30 +197,55 @@ function HighImpactList({ highImpact, onChange }) {
       <h4 className="text-sm font-semibold text-slate-700 mb-2">Ítems de Alto Impacto</h4>
       <div className="space-y-1">
         {highImpact.map((c, i) => (
-          <div key={i} className="flex items-center gap-2 group">
-            <input
-              type="text"
-              value={c.key}
-              onChange={(e) => updateRow(i, 'key', e.target.value)}
-              className="w-36 text-xs font-mono border border-slate-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-400"
-              placeholder="key"
-            />
-            <input
-              type="text"
-              value={c.label}
-              onChange={(e) => updateRow(i, 'label', e.target.value)}
-              className="flex-1 text-sm border border-slate-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-400"
-              placeholder="Etiqueta"
-            />
-            <button
-              onClick={() => removeRow(i)}
-              className="text-slate-300 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+          <Fragment key={i}>
+            <div className={`flex items-center gap-2 group rounded-lg px-1 ${expanded.has(i) ? 'bg-blue-50/40' : ''}`}>
+              <input
+                type="text"
+                value={c.key}
+                onChange={(e) => updateRow(i, 'key', e.target.value)}
+                className="w-36 text-xs font-mono border border-slate-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-400"
+                placeholder="key"
+              />
+              <input
+                type="text"
+                value={c.label}
+                onChange={(e) => updateRow(i, 'label', e.target.value)}
+                className="flex-1 text-sm border border-slate-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-400"
+                placeholder="Etiqueta"
+              />
+              <button
+                onClick={() => toggleExpand(i)}
+                title={expanded.has(i) ? 'Ocultar descripción' : 'Editar descripción'}
+                className={`transition-colors shrink-0 ${c.description?.trim() ? 'text-blue-400 hover:text-blue-600' : 'text-slate-300 hover:text-slate-500'}`}
+              >
+                <svg className={`w-3.5 h-3.5 transition-transform ${expanded.has(i) ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
+              </button>
+              <button
+                onClick={() => removeRow(i)}
+                className="text-slate-300 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            {expanded.has(i) && (
+              <div className="ml-1 pl-3 border-l-2 border-blue-200 pb-1">
+                <label className="block text-xs text-slate-500 mb-1">
+                  Descripción para la IA — ¿cuándo se considera falta grave?
+                </label>
+                <textarea
+                  value={c.description || ''}
+                  onChange={(e) => updateRow(i, 'description', e.target.value)}
+                  rows={3}
+                  placeholder="Ej: Solo aplica si el agente usa groserías, insultos o lenguaje degradante de forma directa hacia el cliente. No aplica si simplemente faltó amabilidad."
+                  className="w-full text-sm border border-blue-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-blue-400 resize-y bg-white"
+                />
+              </div>
+            )}
+          </Fragment>
         ))}
       </div>
       <div className="flex items-center gap-2 mt-2">
@@ -194,10 +265,7 @@ function HighImpactList({ highImpact, onChange }) {
           className="flex-1 text-sm border border-dashed border-slate-300 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-400"
           placeholder="Etiqueta del ítem"
         />
-        <button
-          onClick={addRow}
-          className="text-blue-600 hover:text-blue-700"
-        >
+        <button onClick={addRow} className="text-blue-600 hover:text-blue-700 shrink-0">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
@@ -247,6 +315,98 @@ function NaRulesSection({ naRules, general, onChange }) {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// ─── InstructionsAccordion ──────────────────────────────────────────────────
+
+function InstructionsAccordion({ instructions, onChange }) {
+  function addSection() {
+    onChange([...instructions, { id: Date.now(), title: '', body: '', open: true }]);
+  }
+
+  function removeSection(id) {
+    onChange(instructions.filter((s) => s.id !== id));
+  }
+
+  function update(id, field, value) {
+    onChange(instructions.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
+  }
+
+  function toggle(id) {
+    onChange(instructions.map((s) => (s.id === id ? { ...s, open: !s.open } : s)));
+  }
+
+  return (
+    <div>
+      <h4 className="text-sm font-semibold text-slate-700 mb-2">Instrucciones Adicionales</h4>
+      <p className="text-xs text-slate-400 mb-3">
+        Cada sección se inyecta al prompt de Gemini con su título como encabezado. Solo se envían las secciones con contenido.
+      </p>
+
+      <div className="space-y-2">
+        {instructions.length === 0 && (
+          <p className="text-xs text-slate-400 italic py-2">Sin instrucciones. Agrega una sección para personalizar la evaluación.</p>
+        )}
+
+        {instructions.map((section) => (
+          <div key={section.id} className="border border-slate-200 rounded-lg overflow-hidden">
+            {/* Header */}
+            <div
+              className="flex items-center gap-2 px-3 py-2 bg-slate-50 cursor-pointer select-none"
+              onClick={() => toggle(section.id)}
+            >
+              <svg
+                className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${section.open ? 'rotate-90' : ''}`}
+                fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+              </svg>
+              <input
+                type="text"
+                value={section.title}
+                onChange={(e) => update(section.id, 'title', e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                placeholder="Título de la sección (ej: Cierre Comercial)"
+                className="flex-1 text-sm font-medium bg-transparent border-0 outline-none focus:ring-1 focus:ring-blue-400 rounded px-1"
+              />
+              {section.body?.trim() && (
+                <span className="text-xs text-blue-500 shrink-0">● activa</span>
+              )}
+              <button
+                onClick={(e) => { e.stopPropagation(); removeSection(section.id); }}
+                className="text-slate-300 hover:text-red-400 transition-colors shrink-0"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Body */}
+            {section.open && (
+              <textarea
+                value={section.body}
+                onChange={(e) => update(section.id, 'body', e.target.value)}
+                rows={4}
+                placeholder="Escribe aquí la instrucción para Gemini sobre este criterio o situación..."
+                className="w-full text-sm border-0 border-t border-slate-200 px-3 py-2 outline-none focus:ring-1 focus:ring-blue-400 resize-y"
+              />
+            )}
+          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={addSection}
+        className="mt-2 text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1"
+      >
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+        </svg>
+        Agregar sección
+      </button>
     </div>
   );
 }
@@ -307,16 +467,10 @@ function CampaignEditor({ campaignKey, config, saving, success, error, onChange,
         onChange={(naRules) => onChange(campaignKey, { ...config, naRules })}
       />
 
-      <div>
-        <h4 className="text-sm font-semibold text-slate-700 mb-2">Instrucciones Adicionales</h4>
-        <textarea
-          value={config.specialInstructions || ''}
-          onChange={(e) => onChange(campaignKey, { ...config, specialInstructions: e.target.value })}
-          rows={4}
-          className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-blue-400 resize-y"
-          placeholder="Instrucciones especiales que se añaden al final del prompt para esta campaña..."
-        />
-      </div>
+      <InstructionsAccordion
+        instructions={config.specialInstructions || []}
+        onChange={(specialInstructions) => onChange(campaignKey, { ...config, specialInstructions })}
+      />
 
       <SaveBar
         general={config.general}
@@ -354,7 +508,15 @@ export default function Configuracion() {
       .then((res) => {
         const map = {};
         for (const item of res.data.data) {
-          map[item.key] = item;
+          // Añadir id y open (campos UI) a cada sección de instrucciones
+          map[item.key] = {
+            ...item,
+            specialInstructions: (item.specialInstructions || []).map((s, i) => ({
+              ...s,
+              id: i + 1,
+              open: false,
+            })),
+          };
         }
         setConfigs(map);
       })
@@ -378,7 +540,11 @@ export default function Configuracion() {
         general_criteria:     cfg.general,
         high_impact_criteria: cfg.highImpact,
         na_rules:             cfg.naRules,
-        special_instructions: cfg.specialInstructions,
+        special_instructions: JSON.stringify(
+          (cfg.specialInstructions || [])
+            .filter((s) => s.title?.trim() || s.body?.trim())
+            .map(({ title, body }) => ({ title, body }))
+        ),
       });
       setSuccess((s) => ({ ...s, [key]: true }));
       setTimeout(() => setSuccess((s) => ({ ...s, [key]: false })), 3000);
