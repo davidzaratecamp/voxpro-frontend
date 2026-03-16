@@ -213,11 +213,14 @@ function UserModal({ user, onClose, onSaved }) {
 
 // ─── Usuarios (page) ─────────────────────────────────────────────────────────
 
+const EMPTY_FILTERS = { search: '', role: '', client: '', status: '' };
+
 export default function Usuarios() {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [users, setUsers]       = useState([]);
+  const [loading, setLoading]   = useState(true);
   const [loadError, setLoadError] = useState(null);
-  const [modal, setModal] = useState(null); // null | 'create' | user object
+  const [modal, setModal]       = useState(null);
+  const [filters, setFilters]   = useState(EMPTY_FILTERS);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -236,7 +239,7 @@ export default function Usuarios() {
         prev.map((u) => u.id === user.id ? { ...u, active: !u.active } : u)
       );
     } catch {
-      // silent fail — user can retry
+      // silent fail
     }
   }
 
@@ -245,8 +248,32 @@ export default function Usuarios() {
     load();
   }
 
+  function setFilter(key, value) {
+    setFilters((f) => ({ ...f, [key]: value }));
+  }
+
+  function clearFilters() {
+    setFilters(EMPTY_FILTERS);
+  }
+
+  const hasActiveFilters = Object.values(filters).some(Boolean);
+
+  const filtered = users.filter((u) => {
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      if (!u.name.toLowerCase().includes(q) && !u.username.toLowerCase().includes(q)) return false;
+    }
+    if (filters.role   && u.role !== filters.role) return false;
+    if (filters.client && !(u.client_codes || []).includes(filters.client)) return false;
+    if (filters.status === 'active'   && !u.active) return false;
+    if (filters.status === 'inactive' &&  u.active) return false;
+    return true;
+  });
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
+
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Usuarios</h1>
@@ -269,6 +296,79 @@ export default function Usuarios() {
         </div>
       )}
 
+      {/* Filtros */}
+      <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 flex flex-wrap items-center gap-3">
+        {/* Búsqueda texto */}
+        <div className="relative flex-1 min-w-48">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+          </svg>
+          <input
+            type="text"
+            value={filters.search}
+            onChange={(e) => setFilter('search', e.target.value)}
+            placeholder="Buscar por nombre o usuario..."
+            className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg outline-none focus:ring-1 focus:ring-blue-400"
+          />
+        </div>
+
+        {/* Rol */}
+        <select
+          value={filters.role}
+          onChange={(e) => setFilter('role', e.target.value)}
+          className="text-sm border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-blue-400 bg-white text-slate-600"
+        >
+          <option value="">Todos los roles</option>
+          {ROLES.map((r) => (
+            <option key={r.value} value={r.value}>{r.label}</option>
+          ))}
+        </select>
+
+        {/* Cliente */}
+        <select
+          value={filters.client}
+          onChange={(e) => setFilter('client', e.target.value)}
+          className="text-sm border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-blue-400 bg-white text-slate-600"
+        >
+          <option value="">Todos los clientes</option>
+          {CLIENT_CODES.map((c) => (
+            <option key={c.value} value={c.value}>{c.label}</option>
+          ))}
+        </select>
+
+        {/* Estado */}
+        <select
+          value={filters.status}
+          onChange={(e) => setFilter('status', e.target.value)}
+          className="text-sm border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-blue-400 bg-white text-slate-600"
+        >
+          <option value="">Todos los estados</option>
+          <option value="active">Activos</option>
+          <option value="inactive">Inactivos</option>
+        </select>
+
+        {/* Limpiar */}
+        {hasActiveFilters && (
+          <button
+            onClick={clearFilters}
+            className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Limpiar
+          </button>
+        )}
+      </div>
+
+      {/* Contador */}
+      {!loading && (
+        <p className="text-xs text-slate-400 -mt-3">
+          {filtered.length} de {users.length} usuario{users.length !== 1 ? 's' : ''}
+        </p>
+      )}
+
+      {/* Tabla */}
       {loading ? (
         <div className="text-sm text-slate-400 py-8 text-center">Cargando usuarios...</div>
       ) : (
@@ -285,14 +385,14 @@ export default function Usuarios() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {users.length === 0 && (
+              {filtered.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-slate-400 text-sm">
-                    No hay usuarios registrados
+                    {hasActiveFilters ? 'Sin resultados para los filtros aplicados' : 'No hay usuarios registrados'}
                   </td>
                 </tr>
               )}
-              {users.map((u) => (
+              {filtered.map((u) => (
                 <tr key={u.id} className={`hover:bg-slate-50 transition-colors ${!u.active ? 'opacity-50' : ''}`}>
                   <td className="px-4 py-3 font-medium text-slate-800">{u.name}</td>
                   <td className="px-4 py-3 font-mono text-slate-500 text-xs">{u.username}</td>
