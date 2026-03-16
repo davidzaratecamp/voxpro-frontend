@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -10,6 +11,8 @@ import Agentes from './pages/Agentes';
 import AgentDetail from './pages/AgentDetail';
 import AgentRecordings from './pages/AgentRecordings';
 import Reportes from './pages/Reportes';
+import Configuracion from './pages/Configuracion';
+import Usuarios from './pages/Usuarios';
 
 export default function App() {
   return (
@@ -31,6 +34,22 @@ export default function App() {
             <Route path="/reportes" element={<Reportes />} />
             <Route path="/audit/:id" element={<AuditDetail />} />
             <Route path="/agent-recordings/:agentId" element={<AgentRecordings />} />
+            <Route
+              path="/configuracion"
+              element={
+                <AdminRoute role="supervisor_calidad">
+                  <Configuracion />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/usuarios"
+              element={
+                <AdminRoute role="gestor_usuarios">
+                  <Usuarios />
+                </AdminRoute>
+              }
+            />
           </Route>
         </Routes>
       </AuthProvider>
