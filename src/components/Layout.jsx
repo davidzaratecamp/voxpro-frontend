@@ -21,7 +21,7 @@ export default function Layout() {
   const pathname = location.pathname;
 
   // Nav items
-  const isAuditor = ['auditor_obama', 'auditor_claro', 'auditor_lv', 'coordinator_obama'].includes(user?.role);
+  const isAuditor = user?.role === 'coordinator';
 
   const navItems = [
     ...(isAuditor ? [{
