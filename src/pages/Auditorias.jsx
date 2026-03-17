@@ -41,14 +41,17 @@ export default function Auditorias() {
   const [scannedByDate, setScannedByDate] = useState({});
   const [scanError, setScanError] = useState(null);
 
-  // Load scan data from localStorage only — days appear when manually scanned
-  useEffect(() => {
-    if (!user?.id) return;
+  // Load agents by date from the backend (shared across all PCs)
+  const fetchWeekAgents = useCallback(async (week) => {
     try {
-      const localData = JSON.parse(localStorage.getItem(`vp_scans_${user.id}`)) || {};
-      setScannedByDate(localData);
+      const res = await client.get('/scan/week-agents', { params: { week_start: week } });
+      setScannedByDate(res.data.data || {});
     } catch { /* ignore */ }
-  }, [user?.id]);
+  }, []);
+
+  useEffect(() => {
+    fetchWeekAgents(weekStart);
+  }, [weekStart, fetchWeekAgents]);
 
 
   // Sync filters to URL query params
@@ -113,19 +116,9 @@ export default function Auditorias() {
     setScanError(null);
     try {
       const res = await client.post('/scan/daily', { date: scanDate }, { timeout: 120000 });
-      const { agents, date: returnedDate } = res.data.data;
+      const { date: returnedDate } = res.data.data;
       const d = returnedDate || scanDate;
-      const list = (agents || []).sort((a, b) => b.recording_count - a.recording_count);
-      setScannedByDate((prev) => {
-        const updated = { ...prev };
-        if (list.length > 0) {
-          updated[d] = list;
-        } else {
-          delete updated[d]; // no resaltar si no hay agentes
-        }
-        localStorage.setItem(`vp_scans_${user.id}`, JSON.stringify(updated));
-        return updated;
-      });
+      await fetchWeekAgents(weekStart);
       setDateFilter(d);
     } catch (err) {
       console.error('Error scanning:', err);
@@ -356,22 +349,7 @@ export default function Auditorias() {
               </span>
               <span className="ml-2 text-xs text-slate-500">{scannedByDate[dateFilter].length} agentes</span>
             </div>
-            <button
-              onClick={() => {
-                setScannedByDate((prev) => {
-                  const updated = { ...prev };
-                  delete updated[dateFilter];
-                  localStorage.setItem(`vp_scans_${user.id}`, JSON.stringify(updated));
-                  return updated;
-                });
-              }}
-              className="text-slate-400 hover:text-slate-600 transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+            </div>
           {scannedByDate[dateFilter].length === 0 ? (
             <p className="px-5 py-8 text-center text-sm text-slate-400">
               No se encontraron grabaciones para esta fecha
