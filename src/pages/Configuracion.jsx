@@ -277,9 +277,10 @@ function HighImpactList({ highImpact, onChange }) {
 
 // ─── NaRulesSection ─────────────────────────────────────────────────────────
 
-function NaGroupPanel({ group, groupLabel, isCustom, naRules, generalKeys, generalKeySet, newKeys, setNewKeys, onChange, onRemoveGroup }) {
+function NaGroupPanel({ group, groupLabel, isCustom, naRules, generalKeys, generalKeySet, highImpactKeys, highImpactKeySet, onChange, onRemoveGroup }) {
   const active = new Set(naRules[group] || []);
-  const extraKeys = (naRules[group] || []).filter((k) => !generalKeySet.has(k));
+  const knownKeySet = new Set([...generalKeys, ...highImpactKeys]);
+  const extraKeys = (naRules[group] || []).filter((k) => !knownKeySet.has(k));
 
   function toggleKey(key) {
     const current = naRules[group] || [];
@@ -287,17 +288,11 @@ function NaGroupPanel({ group, groupLabel, isCustom, naRules, generalKeys, gener
     onChange({ ...naRules, [group]: next });
   }
 
-  function addKey() {
-    const key = (newKeys[group] || '').trim();
-    if (!key) return;
-    const current = naRules[group] || [];
-    if (!current.includes(key)) onChange({ ...naRules, [group]: [...current, key] });
-    setNewKeys((prev) => ({ ...prev, [group]: '' }));
-  }
-
   function removeKey(key) {
     onChange({ ...naRules, [group]: (naRules[group] || []).filter((k) => k !== key) });
   }
+
+  const hasAnything = generalKeys.length > 0 || highImpactKeys.length > 0 || extraKeys.length > 0;
 
   return (
     <div className={`border rounded-lg p-3 ${isCustom ? 'border-orange-200 bg-orange-50/30' : 'border-slate-200'}`}>
@@ -314,55 +309,71 @@ function NaGroupPanel({ group, groupLabel, isCustom, naRules, generalKeys, gener
           </button>
         )}
       </div>
-      <div className="space-y-1 max-h-48 overflow-y-auto">
-        {generalKeys.length === 0 && extraKeys.length === 0 && (
+      <div className="space-y-1 max-h-64 overflow-y-auto">
+        {!hasAnything && (
           <p className="text-xs text-slate-400 italic">Sin items aún</p>
         )}
-        {generalKeys.map((key) => (
-          <label key={key} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 rounded px-1 py-0.5">
-            <input
-              type="checkbox"
-              checked={active.has(key)}
-              onChange={() => toggleKey(key)}
-              className="w-3.5 h-3.5 rounded text-blue-600 border-slate-300 focus:ring-blue-400"
-            />
-            <span className="text-xs font-mono text-slate-600">{key}</span>
-          </label>
-        ))}
-        {extraKeys.map((key) => (
-          <div key={key} className="flex items-center gap-2 px-1 py-0.5 group">
-            <input type="checkbox" checked readOnly className="w-3.5 h-3.5 rounded text-purple-600 border-slate-300" />
-            <span className="text-xs font-mono text-purple-700 flex-1">{key}</span>
-            <button onClick={() => removeKey(key)} className="text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        ))}
-      </div>
-      <div className="flex items-center gap-1 mt-2 pt-2 border-t border-slate-100">
-        <input
-          type="text"
-          value={newKeys[group] || ''}
-          onChange={(e) => setNewKeys((prev) => ({ ...prev, [group]: e.target.value }))}
-          onKeyDown={(e) => e.key === 'Enter' && addKey()}
-          placeholder="nuevo_key"
-          className="flex-1 text-xs font-mono border border-dashed border-slate-300 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-purple-400"
-        />
-        <button onClick={addKey} className="text-purple-600 hover:text-purple-700" title="Agregar item">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-        </button>
+
+        {generalKeys.length > 0 && (
+          <>
+            <p className="text-xs text-slate-400 uppercase tracking-wide font-medium px-1 pt-1">Criterios generales</p>
+            {generalKeys.map((key) => (
+              <label key={key} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 rounded px-1 py-0.5">
+                <input
+                  type="checkbox"
+                  checked={active.has(key)}
+                  onChange={() => toggleKey(key)}
+                  className="w-3.5 h-3.5 rounded text-blue-600 border-slate-300 focus:ring-blue-400"
+                />
+                <span className="text-xs font-mono text-slate-600">{key}</span>
+              </label>
+            ))}
+          </>
+        )}
+
+        {highImpactKeys.length > 0 && (
+          <>
+            <p className="text-xs text-amber-500 uppercase tracking-wide font-medium px-1 pt-2">Alto impacto</p>
+            {highImpactKeys.map((key) => (
+              <label key={key} className="flex items-center gap-2 cursor-pointer hover:bg-amber-50 rounded px-1 py-0.5">
+                <input
+                  type="checkbox"
+                  checked={active.has(key)}
+                  onChange={() => toggleKey(key)}
+                  className="w-3.5 h-3.5 rounded text-amber-500 border-slate-300 focus:ring-amber-400"
+                />
+                <span className="text-xs font-mono text-amber-700">{key}</span>
+              </label>
+            ))}
+          </>
+        )}
+
+        {extraKeys.length > 0 && (
+          <>
+            <p className="text-xs text-purple-400 uppercase tracking-wide font-medium px-1 pt-2">Otros</p>
+            {extraKeys.map((key) => (
+              <div key={key} className="flex items-center gap-2 px-1 py-0.5 group">
+                <input type="checkbox" checked readOnly className="w-3.5 h-3.5 rounded text-purple-600 border-slate-300" />
+                <span className="text-xs font-mono text-purple-700 flex-1">{key}</span>
+                <button onClick={() => removeKey(key)} className="text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-function NaRulesSection({ naRules, general, onChange }) {
+function NaRulesSection({ naRules, general, highImpact, onChange }) {
   const generalKeys = general.map((c) => c.key).filter(Boolean);
   const generalKeySet = new Set(generalKeys);
+  const highImpactKeys = (highImpact || []).map((c) => c.key).filter(Boolean);
+  const highImpactKeySet = new Set(highImpactKeys);
   const [newKeys, setNewKeys] = useState({});
   const [newGroupKey, setNewGroupKey] = useState('');
   const [newGroupLabel, setNewGroupLabel] = useState('');
@@ -384,7 +395,7 @@ function NaRulesSection({ naRules, general, onChange }) {
     onChange({ ...rest, _custom_groups: customGroups.filter((g) => g.key !== groupKey) });
   }
 
-  const sharedProps = { naRules, generalKeys, generalKeySet, newKeys, setNewKeys, onChange };
+  const sharedProps = { naRules, generalKeys, generalKeySet, highImpactKeys, highImpactKeySet, onChange };
 
   return (
     <div>
@@ -574,6 +585,7 @@ function CampaignEditor({ campaignKey, config, saving, success, error, onChange,
       <NaRulesSection
         naRules={config.naRules}
         general={config.general}
+        highImpact={config.highImpact}
         onChange={(naRules) => onChange(campaignKey, { ...config, naRules })}
       />
 
