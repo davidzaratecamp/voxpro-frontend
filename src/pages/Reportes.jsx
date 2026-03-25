@@ -12,7 +12,7 @@ import {
   Legend,
   Filler,
 } from 'chart.js';
-import { Line, Bar, Doughnut } from 'react-chartjs-2';
+import { Bar, Doughnut } from 'react-chartjs-2';
 import ExcelJS from 'exceljs';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -54,57 +54,69 @@ const CHART_FONT = { family: 'Inter, ui-sans-serif, system-ui, sans-serif', size
 
 // ─── Chart data builders ───────────────────────────────────────────────────────
 
-function buildTrendChartData(rows) {
+function buildWeeklyVolumeChartData(rows) {
   if (!rows || rows.length === 0) return { labels: [], datasets: [] };
 
-  const allWeeks = [...new Set(rows.map((r) => r.week_start))].sort();
-  const allClients = [...new Set(rows.map((r) => r.client_code))];
-
-  const labels = allWeeks.map((w) => {
-    const d = new Date(w + 'T00:00:00');
-    return `Sem ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
-  });
-
-  const matrix = {};
+  // Aggregate all clients per week
+  const weekMap = {};
   for (const r of rows) {
-    matrix[`${r.week_start}__${r.client_code}`] = r.avg_score;
+    if (!weekMap[r.week_start]) weekMap[r.week_start] = { totalCount: 0, totalScore: 0, countWithScore: 0 };
+    weekMap[r.week_start].totalCount += r.count;
+    if (r.avg_score > 0) {
+      weekMap[r.week_start].totalScore += r.avg_score * r.count;
+      weekMap[r.week_start].countWithScore += r.count;
+    }
   }
 
-  const datasets = allClients.map((code) => {
-    const colors = CLIENT_COLORS[code] || { border: '#94a3b8', bg: 'rgba(148,163,184,0.15)' };
-    return {
-      label: CLIENT_LABELS[code] || code,
-      data: allWeeks.map((w) => matrix[`${w}__${code}`] ?? null),
-      borderColor: colors.border,
-      backgroundColor: colors.bg,
-      tension: 0.4,
-      fill: true,
-      spanGaps: true,
-      pointRadius: 3,
-      pointHoverRadius: 5,
-    };
-  });
-
-  return { labels, datasets };
-}
-
-function buildByClientChartData(rows) {
-  if (!rows || rows.length === 0) return { labels: [], datasets: [] };
-
-  const sorted = [...rows].sort((a, b) => b.avg_score - a.avg_score);
-  const labels = sorted.map((r) => CLIENT_LABELS[r.client_code] || r.client_code);
-  const backgroundColors = sorted.map((r) => {
-    const c = CLIENT_COLORS[r.client_code];
-    return c ? c.border : '#94a3b8';
+  const weeks = Object.keys(weekMap).sort();
+  const labels = weeks.map((w) => {
+    const d = new Date(w + 'T00:00:00');
+    return `Sem ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
 
   return {
     labels,
     datasets: [
       {
+        type: 'bar',
+        label: 'Auditorías',
+        data: weeks.map((w) => weekMap[w].totalCount),
+        backgroundColor: 'rgba(59,130,246,0.5)',
+        borderRadius: 4,
+        yAxisID: 'yCount',
+        order: 2,
+      },
+      {
+        type: 'line',
+        label: 'Score promedio',
+        data: weeks.map((w) => {
+          const { totalScore, countWithScore } = weekMap[w];
+          return countWithScore > 0 ? Math.round(totalScore / countWithScore) : null;
+        }),
+        borderColor: '#10b981',
+        backgroundColor: 'transparent',
+        tension: 0.3,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        yAxisID: 'yScore',
+        spanGaps: true,
+        order: 1,
+      },
+    ],
+  };
+}
+
+function buildByAuditorChartData(rows) {
+  if (!rows || rows.length === 0) return { labels: [], datasets: [] };
+
+  const sorted = [...rows].sort((a, b) => b.avg_score - a.avg_score);
+  return {
+    labels: sorted.map((r) => r.auditor_name || `Auditor ${r.auditor_id}`),
+    datasets: [
+      {
         label: 'Score Promedio',
         data: sorted.map((r) => r.avg_score),
-        backgroundColor: backgroundColors,
+        backgroundColor: sorted.map((r) => r.avg_score >= 80 ? '#10b981' : r.avg_score >= 60 ? '#f59e0b' : '#ef4444'),
         borderRadius: 6,
         borderSkipped: false,
       },
@@ -174,7 +186,7 @@ const BASE_TOOLTIP = {
   cornerRadius: 6,
 };
 
-const LINE_OPTIONS = {
+const COMBO_OPTIONS = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
@@ -182,11 +194,22 @@ const LINE_OPTIONS = {
     tooltip: BASE_TOOLTIP,
   },
   scales: {
-    y: {
+    yCount: {
+      type: 'linear',
+      position: 'left',
+      min: 0,
+      ticks: { font: CHART_FONT, precision: 0 },
+      grid: { color: '#f1f5f9' },
+      title: { display: true, text: 'Auditorías', font: { ...CHART_FONT, size: 11 }, color: '#94a3b8' },
+    },
+    yScore: {
+      type: 'linear',
+      position: 'right',
       min: 0,
       max: 100,
       ticks: { callback: (v) => v + '%', font: CHART_FONT },
-      grid: { color: '#f1f5f9' },
+      grid: { drawOnChartArea: false },
+      title: { display: true, text: 'Score', font: { ...CHART_FONT, size: 11 }, color: '#94a3b8' },
     },
     x: { ticks: { font: CHART_FONT }, grid: { display: false } },
   },
@@ -285,7 +308,7 @@ export default function Reportes() {
   // Data state
   const [kpis, setKpis] = useState(null);
   const [trend, setTrend] = useState([]);
-  const [byClient, setByClient] = useState([]);
+  const [byAuditor, setByAuditor] = useState([]);
   const [failing, setFailing] = useState([]);
   const [statusDist, setStatusDist] = useState([]);
   const [ranking, setRanking] = useState([]);
@@ -317,10 +340,10 @@ export default function Reportes() {
       const params = buildParams();
       const trendParams = { ...params };
 
-      const [kpisRes, trendRes, byClientRes, failingRes, statusRes, rankingRes] = await Promise.all([
+      const [kpisRes, trendRes, byAuditorRes, failingRes, statusRes, rankingRes] = await Promise.all([
         client.get('/reports/kpis', { params }),
         client.get('/reports/weekly-trend', { params: trendParams }),
-        client.get('/reports/score-by-client', { params }),
+        client.get('/reports/score-by-auditor', { params }),
         client.get('/reports/failing-criteria', { params }),
         client.get('/reports/status-distribution', { params }),
         client.get('/reports/agent-ranking', { params }),
@@ -328,7 +351,7 @@ export default function Reportes() {
 
       setKpis(kpisRes.data.data);
       setTrend(trendRes.data.data);
-      setByClient(byClientRes.data.data);
+      setByAuditor(byAuditorRes.data.data);
       setFailing(failingRes.data.data);
       setStatusDist(statusRes.data.data);
       setRanking(rankingRes.data.data);
@@ -846,30 +869,32 @@ export default function Reportes() {
           />
         </div>
 
-        {/* Charts Row 1 — Trend + Score by client */}
+        {/* Charts Row 1 — Weekly volume+score + Score by auditor */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="bg-white rounded-xl border border-slate-200 p-5">
-            <h2 className="text-sm font-semibold text-slate-700 mb-4">Tendencia semanal</h2>
+            <h2 className="text-sm font-semibold text-slate-700 mb-1">Auditorías por semana</h2>
+            <p className="text-xs text-slate-400 mb-4">Volumen de auditorías y score promedio semanal</p>
             <div className="h-64">
               {loading ? (
                 <div className="flex items-center justify-center h-full text-slate-400 text-sm">Cargando...</div>
               ) : trend.length === 0 ? (
                 <div className="flex items-center justify-center h-full text-slate-400 text-sm">Sin datos</div>
               ) : (
-                <Line data={buildTrendChartData(trend)} options={LINE_OPTIONS} />
+                <Bar data={buildWeeklyVolumeChartData(trend)} options={COMBO_OPTIONS} />
               )}
             </div>
           </div>
 
           <div className="bg-white rounded-xl border border-slate-200 p-5">
-            <h2 className="text-sm font-semibold text-slate-700 mb-4">Score por cliente</h2>
+            <h2 className="text-sm font-semibold text-slate-700 mb-1">Score por coordinador</h2>
+            <p className="text-xs text-slate-400 mb-4">Score promedio de auditorías completadas por auditor</p>
             <div className="h-64">
               {loading ? (
                 <div className="flex items-center justify-center h-full text-slate-400 text-sm">Cargando...</div>
-              ) : byClient.length === 0 ? (
+              ) : byAuditor.length === 0 ? (
                 <div className="flex items-center justify-center h-full text-slate-400 text-sm">Sin datos</div>
               ) : (
-                <Bar data={buildByClientChartData(byClient)} options={H_BAR_OPTIONS} />
+                <Bar data={buildByAuditorChartData(byAuditor)} options={H_BAR_OPTIONS} />
               )}
             </div>
           </div>
