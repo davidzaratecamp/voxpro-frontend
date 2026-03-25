@@ -277,99 +277,153 @@ function HighImpactList({ highImpact, onChange }) {
 
 // ─── NaRulesSection ─────────────────────────────────────────────────────────
 
-function NaRulesSection({ naRules, general, onChange }) {
-  const generalKeys = general.map((c) => c.key).filter(Boolean);
-  const generalKeySet = new Set(generalKeys);
-  const [newKeys, setNewKeys] = useState({});
+function NaGroupPanel({ group, groupLabel, isCustom, naRules, generalKeys, generalKeySet, newKeys, setNewKeys, onChange, onRemoveGroup }) {
+  const active = new Set(naRules[group] || []);
+  const extraKeys = (naRules[group] || []).filter((k) => !generalKeySet.has(k));
 
-  function toggleKey(group, key) {
+  function toggleKey(key) {
     const current = naRules[group] || [];
     const next = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
     onChange({ ...naRules, [group]: next });
   }
 
-  function addCustomKey(group) {
+  function addKey() {
     const key = (newKeys[group] || '').trim();
     if (!key) return;
     const current = naRules[group] || [];
-    if (!current.includes(key)) {
-      onChange({ ...naRules, [group]: [...current, key] });
-    }
+    if (!current.includes(key)) onChange({ ...naRules, [group]: [...current, key] });
     setNewKeys((prev) => ({ ...prev, [group]: '' }));
   }
 
-  function removeCustomKey(group, key) {
-    const current = naRules[group] || [];
-    onChange({ ...naRules, [group]: current.filter((k) => k !== key) });
+  function removeKey(key) {
+    onChange({ ...naRules, [group]: (naRules[group] || []).filter((k) => k !== key) });
   }
+
+  return (
+    <div className={`border rounded-lg p-3 ${isCustom ? 'border-orange-200 bg-orange-50/30' : 'border-slate-200'}`}>
+      <div className="flex items-center justify-between mb-2">
+        <p className={`text-xs font-semibold uppercase tracking-wide ${isCustom ? 'text-orange-600' : 'text-slate-500'}`}>
+          {groupLabel}
+          {isCustom && <span className="ml-1 normal-case font-normal text-orange-400">(personalizado)</span>}
+        </p>
+        {isCustom && (
+          <button onClick={onRemoveGroup} className="text-slate-300 hover:text-red-400 transition-colors" title="Eliminar grupo">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+      <div className="space-y-1 max-h-48 overflow-y-auto">
+        {generalKeys.length === 0 && extraKeys.length === 0 && (
+          <p className="text-xs text-slate-400 italic">Sin items aún</p>
+        )}
+        {generalKeys.map((key) => (
+          <label key={key} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 rounded px-1 py-0.5">
+            <input
+              type="checkbox"
+              checked={active.has(key)}
+              onChange={() => toggleKey(key)}
+              className="w-3.5 h-3.5 rounded text-blue-600 border-slate-300 focus:ring-blue-400"
+            />
+            <span className="text-xs font-mono text-slate-600">{key}</span>
+          </label>
+        ))}
+        {extraKeys.map((key) => (
+          <div key={key} className="flex items-center gap-2 px-1 py-0.5 group">
+            <input type="checkbox" checked readOnly className="w-3.5 h-3.5 rounded text-purple-600 border-slate-300" />
+            <span className="text-xs font-mono text-purple-700 flex-1">{key}</span>
+            <button onClick={() => removeKey(key)} className="text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-1 mt-2 pt-2 border-t border-slate-100">
+        <input
+          type="text"
+          value={newKeys[group] || ''}
+          onChange={(e) => setNewKeys((prev) => ({ ...prev, [group]: e.target.value }))}
+          onKeyDown={(e) => e.key === 'Enter' && addKey()}
+          placeholder="nuevo_key"
+          className="flex-1 text-xs font-mono border border-dashed border-slate-300 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-purple-400"
+        />
+        <button onClick={addKey} className="text-purple-600 hover:text-purple-700" title="Agregar item">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function NaRulesSection({ naRules, general, onChange }) {
+  const generalKeys = general.map((c) => c.key).filter(Boolean);
+  const generalKeySet = new Set(generalKeys);
+  const [newKeys, setNewKeys] = useState({});
+  const [newGroupKey, setNewGroupKey] = useState('');
+  const [newGroupLabel, setNewGroupLabel] = useState('');
+
+  const customGroups = naRules._custom_groups || [];
+
+  function addCustomGroup() {
+    const key = newGroupKey.trim().replace(/\s+/g, '_');
+    const label = newGroupLabel.trim();
+    if (!key || !label) return;
+    if (customGroups.find((g) => g.key === key) || NA_RULE_LABELS[key]) return;
+    onChange({ ...naRules, _custom_groups: [...customGroups, { key, label }], [key]: [] });
+    setNewGroupKey('');
+    setNewGroupLabel('');
+  }
+
+  function removeCustomGroup(groupKey) {
+    const { [groupKey]: _removed, ...rest } = naRules;
+    onChange({ ...rest, _custom_groups: customGroups.filter((g) => g.key !== groupKey) });
+  }
+
+  const sharedProps = { naRules, generalKeys, generalKeySet, newKeys, setNewKeys, onChange };
 
   return (
     <div>
       <h4 className="text-sm font-semibold text-slate-700 mb-3">Reglas N/A — Overrides automáticos</h4>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {Object.entries(NA_RULE_LABELS).map(([group, groupLabel]) => {
-          const active = new Set(naRules[group] || []);
-          const customKeys = (naRules[group] || []).filter((k) => !generalKeySet.has(k));
-          return (
-            <div key={group} className="border border-slate-200 rounded-lg p-3">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">{groupLabel}</p>
-              <div className="space-y-1 max-h-48 overflow-y-auto">
-                {generalKeys.length === 0 && customKeys.length === 0 && (
-                  <p className="text-xs text-slate-400 italic">Sin items aún</p>
-                )}
-                {generalKeys.map((key) => (
-                  <label key={key} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 rounded px-1 py-0.5">
-                    <input
-                      type="checkbox"
-                      checked={active.has(key)}
-                      onChange={() => toggleKey(group, key)}
-                      className="w-3.5 h-3.5 rounded text-blue-600 border-slate-300 focus:ring-blue-400"
-                    />
-                    <span className="text-xs font-mono text-slate-600">{key}</span>
-                  </label>
-                ))}
-                {customKeys.map((key) => (
-                  <div key={key} className="flex items-center gap-2 px-1 py-0.5 group">
-                    <input
-                      type="checkbox"
-                      checked={true}
-                      onChange={() => removeCustomKey(group, key)}
-                      className="w-3.5 h-3.5 rounded text-purple-600 border-slate-300 focus:ring-purple-400"
-                    />
-                    <span className="text-xs font-mono text-purple-700 flex-1">{key}</span>
-                    <button
-                      onClick={() => removeCustomKey(group, key)}
-                      className="text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center gap-1 mt-2 pt-2 border-t border-slate-100">
-                <input
-                  type="text"
-                  value={newKeys[group] || ''}
-                  onChange={(e) => setNewKeys((prev) => ({ ...prev, [group]: e.target.value }))}
-                  onKeyDown={(e) => e.key === 'Enter' && addCustomKey(group)}
-                  placeholder="nuevo_key"
-                  className="flex-1 text-xs font-mono border border-dashed border-slate-300 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-purple-400"
-                />
-                <button
-                  onClick={() => addCustomKey(group)}
-                  className="text-purple-600 hover:text-purple-700"
-                  title="Agregar item"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          );
-        })}
+        {Object.entries(NA_RULE_LABELS).map(([group, groupLabel]) => (
+          <NaGroupPanel key={group} group={group} groupLabel={groupLabel} isCustom={false} {...sharedProps} />
+        ))}
+        {customGroups.map(({ key: group, label: groupLabel }) => (
+          <NaGroupPanel key={group} group={group} groupLabel={groupLabel} isCustom={true} onRemoveGroup={() => removeCustomGroup(group)} {...sharedProps} />
+        ))}
+      </div>
+
+      {/* Agregar nuevo grupo */}
+      <div className="mt-4 p-3 border border-dashed border-orange-300 rounded-lg bg-orange-50/20">
+        <p className="text-xs font-medium text-orange-600 mb-2">Agregar nuevo caso N/A</p>
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={newGroupKey}
+            onChange={(e) => setNewGroupKey(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addCustomGroup()}
+            placeholder="key_del_caso"
+            className="w-36 text-xs font-mono border border-orange-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-orange-400 bg-white"
+          />
+          <input
+            type="text"
+            value={newGroupLabel}
+            onChange={(e) => setNewGroupLabel(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addCustomGroup()}
+            placeholder="Etiqueta del caso (ej: Llamada de prueba)"
+            className="flex-1 text-sm border border-orange-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-orange-400 bg-white"
+          />
+          <button onClick={addCustomGroup} className="text-orange-600 hover:text-orange-700 shrink-0" title="Crear grupo">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   );
