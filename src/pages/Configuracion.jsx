@@ -279,11 +279,28 @@ function HighImpactList({ highImpact, onChange }) {
 
 function NaRulesSection({ naRules, general, onChange }) {
   const generalKeys = general.map((c) => c.key).filter(Boolean);
+  const generalKeySet = new Set(generalKeys);
+  const [newKeys, setNewKeys] = useState({});
 
   function toggleKey(group, key) {
     const current = naRules[group] || [];
     const next = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
     onChange({ ...naRules, [group]: next });
+  }
+
+  function addCustomKey(group) {
+    const key = (newKeys[group] || '').trim();
+    if (!key) return;
+    const current = naRules[group] || [];
+    if (!current.includes(key)) {
+      onChange({ ...naRules, [group]: [...current, key] });
+    }
+    setNewKeys((prev) => ({ ...prev, [group]: '' }));
+  }
+
+  function removeCustomKey(group, key) {
+    const current = naRules[group] || [];
+    onChange({ ...naRules, [group]: current.filter((k) => k !== key) });
   }
 
   return (
@@ -292,12 +309,13 @@ function NaRulesSection({ naRules, general, onChange }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {Object.entries(NA_RULE_LABELS).map(([group, groupLabel]) => {
           const active = new Set(naRules[group] || []);
+          const customKeys = (naRules[group] || []).filter((k) => !generalKeySet.has(k));
           return (
             <div key={group} className="border border-slate-200 rounded-lg p-3">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">{groupLabel}</p>
-              <div className="space-y-1 max-h-40 overflow-y-auto">
-                {generalKeys.length === 0 && (
-                  <p className="text-xs text-slate-400 italic">Sin criterios generales aún</p>
+              <div className="space-y-1 max-h-48 overflow-y-auto">
+                {generalKeys.length === 0 && customKeys.length === 0 && (
+                  <p className="text-xs text-slate-400 italic">Sin items aún</p>
                 )}
                 {generalKeys.map((key) => (
                   <label key={key} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 rounded px-1 py-0.5">
@@ -310,6 +328,44 @@ function NaRulesSection({ naRules, general, onChange }) {
                     <span className="text-xs font-mono text-slate-600">{key}</span>
                   </label>
                 ))}
+                {customKeys.map((key) => (
+                  <div key={key} className="flex items-center gap-2 px-1 py-0.5 group">
+                    <input
+                      type="checkbox"
+                      checked={true}
+                      onChange={() => removeCustomKey(group, key)}
+                      className="w-3.5 h-3.5 rounded text-purple-600 border-slate-300 focus:ring-purple-400"
+                    />
+                    <span className="text-xs font-mono text-purple-700 flex-1">{key}</span>
+                    <button
+                      onClick={() => removeCustomKey(group, key)}
+                      className="text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-1 mt-2 pt-2 border-t border-slate-100">
+                <input
+                  type="text"
+                  value={newKeys[group] || ''}
+                  onChange={(e) => setNewKeys((prev) => ({ ...prev, [group]: e.target.value }))}
+                  onKeyDown={(e) => e.key === 'Enter' && addCustomKey(group)}
+                  placeholder="nuevo_key"
+                  className="flex-1 text-xs font-mono border border-dashed border-slate-300 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-purple-400"
+                />
+                <button
+                  onClick={() => addCustomKey(group)}
+                  className="text-purple-600 hover:text-purple-700"
+                  title="Agregar item"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                </button>
               </div>
             </div>
           );
