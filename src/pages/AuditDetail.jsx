@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import client from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/StatusBadge';
 import { formatDuration, formatDate, formatFileSize, CLIENT_LABELS, CAMPAIGN_LABELS } from '../lib/utils';
 
@@ -15,6 +16,8 @@ const STATUS_LABELS = {
 export default function AuditDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isSupervisor = user?.role === 'supervisor_calidad';
   const [selection, setSelection] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -346,8 +349,8 @@ export default function AuditDetail() {
         )}
       </div>
 
-      {/* Manual Evaluation Form */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-5">
+      {/* Manual Evaluation Form — hidden for supervisor */}
+      {!isSupervisor && <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-5">
         <h3 className="text-lg font-semibold text-slate-800">Evaluación manual</h3>
 
         {/* Status */}
@@ -430,7 +433,7 @@ export default function AuditDetail() {
             <span className="text-sm text-emerald-600">Guardado correctamente</span>
           )}
         </div>
-      </div>
+      </div>}
     </div>
   );
 }
