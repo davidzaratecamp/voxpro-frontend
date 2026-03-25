@@ -181,9 +181,11 @@ export default function Agentes() {
                 <tr className="border-b border-slate-100">
                   <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Agente</th>
                   <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Cliente</th>
+                  {user?.role === 'supervisor_calidad' && (
+                    <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Coordinador</th>
+                  )}
                   <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Estado</th>
                   <th className="text-center px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Score Prom.</th>
-                  <th className="text-center px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Rango</th>
                   <th className="text-center px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Auditorías</th>
                   <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Última semana</th>
                 </tr>
@@ -191,7 +193,7 @@ export default function Agentes() {
               <tbody className="divide-y divide-slate-100">
                 {!filtered || filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-5 py-12 text-center text-slate-400">
+                    <td colSpan={user?.role === 'supervisor_calidad' ? 7 : 6} className="px-5 py-12 text-center text-slate-400">
                       {search || riskFilter
                         ? 'No se encontraron agentes con los filtros aplicados'
                         : 'No hay datos de agentes disponibles'}
@@ -219,6 +221,13 @@ export default function Agentes() {
                           {CLIENT_LABELS[agent.client_code] || agent.client_code}
                         </td>
 
+                        {/* Coordinator (supervisor only) */}
+                        {user?.role === 'supervisor_calidad' && (
+                          <td className="px-5 py-3 text-slate-600 text-xs">
+                            {agent.auditor_name || '—'}
+                          </td>
+                        )}
+
                         {/* Risk badge */}
                         <td className="px-5 py-3">
                           <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${risk.bg} ${risk.text}`}>
@@ -240,13 +249,6 @@ export default function Agentes() {
                           ) : (
                             <span className="text-slate-400">—</span>
                           )}
-                        </td>
-
-                        {/* Score range */}
-                        <td className="px-5 py-3 text-center text-xs text-slate-500">
-                          {agent.min_score != null
-                            ? `${agent.min_score} – ${agent.max_score}`
-                            : '—'}
                         </td>
 
                         {/* Audit counts */}
