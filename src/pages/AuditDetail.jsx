@@ -375,8 +375,8 @@ export default function AuditDetail() {
         )}
       </div>
 
-      {/* Manual Evaluation Form — hidden for supervisor */}
-      {!isSupervisor && <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-5">
+      {/* Manual Evaluation Form — hidden for supervisor unless it's their own audit */}
+      {(!isSupervisor || selection?.auditor_id === user?.id) && <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-5">
         <h3 className="text-lg font-semibold text-slate-800">Evaluación manual</h3>
 
         {/* Status */}
