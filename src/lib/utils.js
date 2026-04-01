@@ -49,6 +49,7 @@ export const CLIENT_LABELS = {
   claro_tyt: 'Claro TYT',
   claro_hogar: 'Claro Hogar',
   claro_wcb: 'Claro WCB',
+  reclutamiento: 'Reclutamiento',
 };
 
 export const CAMPAIGN_LABELS = {
