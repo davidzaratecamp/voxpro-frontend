@@ -21,7 +21,7 @@ export default function Layout() {
   const pathname = location.pathname;
 
   // Nav items
-  const AUDITOR_ROLES = ['auditor_obama', 'auditor_claro', 'auditor_lv', 'auditor_reclutamiento', 'coordinator_obama', 'supervisor_calidad'];
+  const AUDITOR_ROLES = ['coordinator', 'auditor_obama', 'auditor_claro', 'auditor_lv', 'auditor_reclutamiento', 'coordinator_obama', 'supervisor_calidad'];
   const isAuditor = AUDITOR_ROLES.includes(user?.role);
 
   const navItems = [
