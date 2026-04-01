@@ -3,9 +3,10 @@ import { criteriaApi } from '../api/criteria';
 import { useAuth } from '../context/AuthContext';
 
 const GROUPS = [
-  { key: 'claro', label: 'Claro', campaigns: ['claro_wcb', 'claro_hogar', 'claro_tyt'] },
-  { key: 'obama', label: 'Obama', campaigns: ['obama_ventas', 'obama_customer'] },
-  { key: 'lv',    label: 'Vital', campaigns: ['lv_ventas', 'lv_customer'] },
+  { key: 'claro',         label: 'Claro',         campaigns: ['claro_wcb', 'claro_hogar', 'claro_tyt'] },
+  { key: 'obama',         label: 'Obama',         campaigns: ['obama_ventas', 'obama_customer'] },
+  { key: 'lv',           label: 'Vital',          campaigns: ['lv_ventas', 'lv_customer'] },
+  { key: 'reclutamiento', label: 'Reclutamiento', campaigns: ['reclutamiento'] },
 ];
 
 // Qué client_code necesita cada campaña para ser visible
@@ -17,6 +18,7 @@ const CAMPAIGN_CLIENT = {
   obama_customer: 'obama',
   lv_ventas:      'lv',
   lv_customer:    'lv',
+  reclutamiento:  'reclutamiento',
 };
 
 const NA_RULE_LABELS = {
