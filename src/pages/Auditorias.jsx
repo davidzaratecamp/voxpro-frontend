@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import client from '../api/client';
 import StatusBadge from '../components/StatusBadge';
+import AuditTable from '../components/AuditTable';
 import { formatDuration, formatDate, getMonday, CLIENT_LABELS, CAMPAIGN_LABELS } from '../lib/utils';
 
 const STATUS_OPTIONS = [
@@ -338,6 +339,13 @@ export default function Auditorias() {
           })}
         </div>
       </div>
+
+      {/* Audit selections list */}
+      <AuditTable
+        selections={filtered}
+        statusFilter={statusFilter}
+        onStatusFilter={setStatusFilter}
+      />
 
       {/* Agents panel — shown for the selected day if scanned */}
       {dateFilter && scannedByDate[dateFilter] && (
