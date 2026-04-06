@@ -350,15 +350,29 @@ export default function Auditorias() {
       {/* Agents panel — shown for the selected day if scanned */}
       {dateFilter && scannedByDate[dateFilter] && (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+          {(() => {
+            const allAgents = scannedByDate[dateFilter];
+            const filteredAgents = allAgents.filter((agent) => {
+              if (clientFilter && agent.client_code !== clientFilter) return false;
+              if (search) {
+                const q = search.toLowerCase();
+                const name = (agent.agent_name || '').toLowerCase();
+                const id = (agent.agent_id || '').toLowerCase();
+                if (!name.includes(q) && !id.includes(q)) return false;
+              }
+              return true;
+            });
+            return (
+              <>
           <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
             <div>
               <span className="text-sm font-semibold text-slate-800">
                 Agentes con grabaciones — {dateFilter}
               </span>
-              <span className="ml-2 text-xs text-slate-500">{scannedByDate[dateFilter].length} agentes</span>
+              <span className="ml-2 text-xs text-slate-500">{filteredAgents.length} agentes</span>
             </div>
             </div>
-          {scannedByDate[dateFilter].length === 0 ? (
+          {filteredAgents.length === 0 ? (
             <p className="px-5 py-8 text-center text-sm text-slate-400">
               No se encontraron grabaciones para esta fecha
             </p>
@@ -372,7 +386,7 @@ export default function Auditorias() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {scannedByDate[dateFilter].map((agent) => (
+                {filteredAgents.map((agent) => (
                   <tr
                     key={agent.agent_id}
                     onClick={() => handleAgentClick(agent, dateFilter)}
@@ -399,6 +413,9 @@ export default function Auditorias() {
               </tbody>
             </table>
           )}
+              </>
+            );
+          })()}
         </div>
       )}
 
