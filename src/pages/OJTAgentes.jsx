@@ -105,8 +105,12 @@ function AgentModal({ agent, awareSources, allowedClientCodes, onClose, onSaved 
               <input
                 type="text"
                 required
+                inputMode="numeric"
                 value={form.cedula}
-                onChange={(e) => setField('cedula', e.target.value)}
+                onChange={(e) => {
+                  const soloDigitos = e.target.value.replace(/\D/g, '');
+                  setField('cedula', soloDigitos);
+                }}
                 className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-400"
                 placeholder="Ej: 1234567890"
               />
