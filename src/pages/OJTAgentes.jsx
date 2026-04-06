@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ojtApi } from '../api/ojt';
+import { useAuth } from '../context/AuthContext';
 
 const CLIENT_CODES = [
   { value: 'obama',       label: 'Obama' },
@@ -26,7 +27,7 @@ const EMPTY_FORM = {
 
 // ─── Modal agregar / editar agente ───────────────────────────────────────────
 
-function AgentModal({ agent, awareSources, onClose, onSaved }) {
+function AgentModal({ agent, awareSources, allowedClientCodes, onClose, onSaved }) {
   const isEdit = !!agent;
   const [form, setForm] = useState(
     isEdit
@@ -135,7 +136,7 @@ function AgentModal({ agent, awareSources, onClose, onSaved }) {
                 <option value="">Seleccionar servidor...</option>
                 {awareSources.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.folder} — {s.client_name}
+                    {s.folder_name} — {s.client_name}
                   </option>
                 ))}
               </select>
@@ -151,7 +152,7 @@ function AgentModal({ agent, awareSources, onClose, onSaved }) {
                 className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-400 bg-white"
               >
                 <option value="">Seleccionar campaña...</option>
-                {CLIENT_CODES.map((c) => (
+                {CLIENT_CODES.filter((c) => allowedClientCodes.includes(c.value)).map((c) => (
                   <option key={c.value} value={c.value}>{c.label}</option>
                 ))}
               </select>
@@ -252,6 +253,8 @@ function GraduateModal({ agent, onClose, onConfirm }) {
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function OJTAgentes() {
+  const { user } = useAuth();
+  const allowedClientCodes = user?.client_codes || [];
   const [agents, setAgents]           = useState([]);
   const [awareSources, setAwareSources] = useState([]);
   const [loading, setLoading]         = useState(true);
@@ -437,6 +440,7 @@ export default function OJTAgentes() {
         <AgentModal
           agent={modal === 'create' ? null : modal}
           awareSources={awareSources}
+          allowedClientCodes={allowedClientCodes}
           onClose={() => setModal(null)}
           onSaved={handleSaved}
         />
