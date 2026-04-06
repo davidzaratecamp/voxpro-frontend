@@ -13,6 +13,7 @@ import AgentRecordings from './pages/AgentRecordings';
 import Reportes from './pages/Reportes';
 import Configuracion from './pages/Configuracion';
 import Usuarios from './pages/Usuarios';
+import OJTAgentes from './pages/OJTAgentes';
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="/reportes" element={<Reportes />} />
             <Route path="/audit/:id" element={<AuditDetail />} />
             <Route path="/agent-recordings/:agentId" element={<AgentRecordings />} />
+            <Route path="/ojt/agentes" element={<OJTAgentes />} />
             <Route
               path="/configuracion"
               element={
