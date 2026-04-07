@@ -2,10 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { usersApi } from '../api/users';
 
 const ROLES = [
-  { value: 'coordinator',       label: 'Coordinador' },
-  { value: 'formador',          label: 'Formador OJT' },
+  { value: 'coordinator',        label: 'Coordinador' },
+  { value: 'formador',           label: 'Formador OJT' },
+  { value: 'coordinador_avaya',  label: 'Coordinador Avaya' },
   { value: 'supervisor_calidad', label: 'Supervisor Calidad' },
-  { value: 'gestor_usuarios',   label: 'Gestor Usuarios' },
+  { value: 'gestor_usuarios',    label: 'Gestor Usuarios' },
 ];
 
 const CLIENT_CODES = [
@@ -20,6 +21,7 @@ const ROLE_LABELS = Object.fromEntries(ROLES.map((r) => [r.value, r.label]));
 const ROLE_COLORS = {
   coordinator:        'bg-blue-100 text-blue-700',
   formador:           'bg-amber-100 text-amber-700',
+  coordinador_avaya:  'bg-violet-100 text-violet-700',
   supervisor_calidad: 'bg-indigo-100 text-indigo-700',
   gestor_usuarios:    'bg-pink-100 text-pink-700',
 };
