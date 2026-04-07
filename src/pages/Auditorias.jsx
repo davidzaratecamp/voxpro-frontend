@@ -43,16 +43,19 @@ export default function Auditorias() {
   const [scanError, setScanError] = useState(null);
 
   // Load agents by date from the backend (shared across all PCs)
-  const fetchWeekAgents = useCallback(async (week) => {
+  const fetchWeekAgents = useCallback(async (week, subcampaign = null) => {
     try {
-      const res = await client.get('/scan/week-agents', { params: { week_start: week } });
+      const params = { week_start: week };
+      if (subcampaign) params.subcampaign = subcampaign;
+      const res = await client.get('/scan/week-agents', { params });
       setScannedByDate(res.data.data || {});
     } catch { /* ignore */ }
   }, []);
 
   useEffect(() => {
-    fetchWeekAgents(weekStart);
-  }, [weekStart, fetchWeekAgents]);
+    const sub = clientFilter === 'claro_wcb' && campaignFilter ? campaignFilter : null;
+    fetchWeekAgents(weekStart, sub);
+  }, [weekStart, clientFilter, campaignFilter, fetchWeekAgents]);
 
 
   // Sync filters to URL query params
@@ -217,7 +220,7 @@ export default function Auditorias() {
           {clientOptions.length > 1 && (
             <select
               value={clientFilter}
-              onChange={(e) => setClientFilter(e.target.value)}
+              onChange={(e) => { setClientFilter(e.target.value); setCampaignFilter(''); }}
               className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all"
             >
               <option value="">Todos los clientes</option>
@@ -227,7 +230,18 @@ export default function Auditorias() {
             </select>
           )}
 
-          {(user?.client_codes || []).some((c) => c === 'obama' || c === 'lv') && (
+          {clientFilter === 'claro_wcb' ? (
+            <select
+              value={campaignFilter}
+              onChange={(e) => setCampaignFilter(e.target.value)}
+              className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all"
+            >
+              <option value="">Todas las sub-campañas</option>
+              <option value="hogar">Hogar</option>
+              <option value="movil">Móvil</option>
+              <option value="pymes">Pymes</option>
+            </select>
+          ) : (user?.client_codes || []).some((c) => c === 'obama' || c === 'lv') && (
             <select
               value={campaignFilter}
               onChange={(e) => setCampaignFilter(e.target.value)}
