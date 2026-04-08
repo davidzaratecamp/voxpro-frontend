@@ -1,17 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { avayaApi } from '../api/avaya';
-import AuditTable from '../components/AuditTable';
 import StatusBadge from '../components/StatusBadge';
-import { getMonday, formatDate, formatFileSize } from '../lib/utils';
+import { getMonday, formatDate, formatDuration, formatFileSize } from '../lib/utils';
 
-const STATUS_OPTIONS = [
-  { value: '', label: 'Todos los estados' },
-  { value: 'selected', label: 'Pendiente' },
-  { value: 'in_review', label: 'En revisión' },
-  { value: 'completed', label: 'Completada' },
-  { value: 'skipped', label: 'Omitida' },
-];
+// ── Upload Modal ─────────────────────────────────────────────────────────────
 
 function UploadModal({ agents, onClose, onUploaded }) {
   const [form, setForm] = useState({
@@ -109,8 +102,94 @@ function UploadModal({ agents, onClose, onUploaded }) {
   );
 }
 
-export default function AvayaAuditorias() {
+// ── Agent row with expandable recordings ─────────────────────────────────────
+
+function AgentRow({ agentId, agentName, recordings, defaultExpanded }) {
   const navigate = useNavigate();
+  const [expanded, setExpanded] = useState(defaultExpanded);
+
+  const counts = {
+    total: recordings.length,
+    pending: recordings.filter((r) => r.status === 'selected').length,
+    completed: recordings.filter((r) => r.status === 'completed').length,
+  };
+
+  return (
+    <>
+      <tr
+        onClick={() => setExpanded((v) => !v)}
+        className="hover:bg-slate-50 cursor-pointer transition-colors"
+      >
+        <td className="px-5 py-3">
+          <div className="flex items-center gap-2">
+            <svg
+              className={`w-4 h-4 text-slate-400 transition-transform ${expanded ? 'rotate-90' : ''}`}
+              fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
+            <div>
+              <span className="font-medium text-slate-800">{agentName || agentId}</span>
+              {agentName && <span className="block text-xs text-slate-400">{agentId}</span>}
+            </div>
+          </div>
+        </td>
+        <td className="px-5 py-3">
+          <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+            {counts.total} {counts.total === 1 ? 'grabación' : 'grabaciones'}
+          </span>
+        </td>
+        <td className="px-5 py-3">
+          <div className="flex items-center gap-2">
+            {counts.pending > 0 && (
+              <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+                {counts.pending} pendiente{counts.pending > 1 ? 's' : ''}
+              </span>
+            )}
+            {counts.completed > 0 && (
+              <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                {counts.completed} completada{counts.completed > 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+        </td>
+      </tr>
+
+      {expanded && recordings.map((r) => (
+        <tr
+          key={r.selection_id}
+          onClick={(e) => { e.stopPropagation(); navigate(`/audit/${r.selection_id}`); }}
+          className="bg-slate-50 hover:bg-blue-50 cursor-pointer transition-colors border-t border-slate-100"
+        >
+          <td className="pl-12 pr-5 py-2.5">
+            <span className="text-xs text-slate-500 truncate max-w-xs block">{r.file_name}</span>
+          </td>
+          <td className="px-5 py-2.5">
+            <span className="text-xs text-slate-500">{formatDate(r.file_date)}</span>
+            {r.call_duration ? (
+              <span className="ml-2 text-xs text-slate-400">{formatDuration(r.call_duration)}</span>
+            ) : null}
+          </td>
+          <td className="px-5 py-2.5">
+            <div className="flex items-center gap-3">
+              <StatusBadge status={r.status} />
+              {r.status === 'completed' && r.score != null && (
+                <span className="text-xs font-semibold text-slate-700">{r.score}%</span>
+              )}
+              <span className="ml-auto text-xs text-blue-600 font-medium">
+                {r.status === 'completed' ? 'Ver resultado' : 'Auditar'} →
+              </span>
+            </div>
+          </td>
+        </tr>
+      ))}
+    </>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+
+export default function AvayaAuditorias() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [recordings, setRecordings] = useState(null);
@@ -119,25 +198,23 @@ export default function AvayaAuditorias() {
   const [showUpload, setShowUpload] = useState(false);
 
   const [weekStart, setWeekStart] = useState(searchParams.get('week') || getMonday());
-  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '');
+  const [dateFilter, setDateFilter] = useState(searchParams.get('date') || '');
   const [search, setSearch] = useState(searchParams.get('search') || '');
 
   // Sync URL params
   useEffect(() => {
     const params = {};
     if (weekStart && weekStart !== getMonday()) params.week = weekStart;
-    if (statusFilter) params.status = statusFilter;
+    if (dateFilter) params.date = dateFilter;
     if (search) params.search = search;
     setSearchParams(params, { replace: true });
-  }, [weekStart, statusFilter, search, setSearchParams]);
+  }, [weekStart, dateFilter, search, setSearchParams]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const params = { week_start: weekStart };
-      if (statusFilter) params.status = statusFilter;
       const [recRes, agentRes] = await Promise.all([
-        avayaApi.getRecordings(params),
+        avayaApi.getRecordings({ week_start: weekStart }),
         avayaApi.getAgents(),
       ]);
       setRecordings(recRes.data.data);
@@ -147,7 +224,7 @@ export default function AvayaAuditorias() {
     } finally {
       setLoading(false);
     }
-  }, [weekStart, statusFilter]);
+  }, [weekStart]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -155,6 +232,7 @@ export default function AvayaAuditorias() {
     const d = new Date(weekStart + 'T00:00:00');
     d.setDate(d.getDate() + offset * 7);
     setWeekStart(d.toISOString().slice(0, 10));
+    setDateFilter('');
   };
 
   const weekEnd = (() => {
@@ -163,35 +241,54 @@ export default function AvayaAuditorias() {
     return d.toISOString().slice(0, 10);
   })();
 
-  // Transform recordings into the format AuditTable expects
-  const selections = recordings?.map((r) => ({
-    id: r.selection_id,
-    status: r.status,
-    score: r.score,
-    agent_id: r.agent_id,
-    agent_name: r.agent_name,
-    client_code: r.client_code,
-    file_date: r.file_date,
-    file_name: r.file_name,
-    call_duration: r.call_duration,
-    week_start: r.week_start,
-  }));
+  const weekDays = useMemo(() => {
+    const days = [];
+    const start = new Date(weekStart + 'T00:00:00');
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      days.push(d.toISOString().slice(0, 10));
+    }
+    return days;
+  }, [weekStart]);
 
-  const filtered = selections?.filter((s) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (s.agent_name || '').toLowerCase().includes(q) || (s.agent_id || '').toLowerCase().includes(q);
-  });
+  // Days that have recordings
+  const daysWithRecordings = useMemo(() => {
+    if (!recordings) return new Set();
+    return new Set(recordings.map((r) => r.file_date));
+  }, [recordings]);
 
-  const counts = recordings ? {
-    total: recordings.length,
-    selected: recordings.filter((r) => r.status === 'selected').length,
-    in_review: recordings.filter((r) => r.status === 'in_review').length,
-    completed: recordings.filter((r) => r.status === 'completed').length,
-    skipped: recordings.filter((r) => r.status === 'skipped').length,
-  } : null;
+  // Filter → group by agent
+  const agentGroups = useMemo(() => {
+    if (!recordings) return null;
+    let list = recordings;
+    if (dateFilter) list = list.filter((r) => r.file_date === dateFilter);
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (r) => (r.agent_name || '').toLowerCase().includes(q) || (r.agent_id || '').toLowerCase().includes(q),
+      );
+    }
+    const map = {};
+    for (const r of list) {
+      if (!map[r.agent_id]) {
+        map[r.agent_id] = { agentId: r.agent_id, agentName: r.agent_name, recordings: [] };
+      }
+      map[r.agent_id].recordings.push(r);
+    }
+    return Object.values(map).sort((a, b) => (a.agentName || '').localeCompare(b.agentName || ''));
+  }, [recordings, dateFilter, search]);
 
-  const activeAgents = agents.length > 0;
+  const counts = useMemo(() => {
+    if (!recordings) return null;
+    return {
+      total: recordings.length,
+      selected: recordings.filter((r) => r.status === 'selected').length,
+      in_review: recordings.filter((r) => r.status === 'in_review').length,
+      completed: recordings.filter((r) => r.status === 'completed').length,
+      skipped: recordings.filter((r) => r.status === 'skipped').length,
+    };
+  }, [recordings]);
 
   return (
     <div className="space-y-6">
@@ -203,8 +300,8 @@ export default function AvayaAuditorias() {
         </div>
         <button
           onClick={() => setShowUpload(true)}
-          disabled={!activeAgents}
-          title={!activeAgents ? 'Registra agentes primero en "Mis Agentes Avaya"' : ''}
+          disabled={agents.length === 0}
+          title={agents.length === 0 ? 'Registra agentes primero en "Mis Agentes Avaya"' : ''}
           className="inline-flex items-center gap-2 bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
@@ -225,32 +322,22 @@ export default function AvayaAuditorias() {
         </div>
       )}
 
-      {/* Filters */}
+      {/* Filters + navigation */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-              </svg>
-            </div>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por agente..."
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
-            />
+        {/* Search */}
+        <div className="relative">
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+            <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
-          >
-            {STATUS_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por agente..."
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+          />
         </div>
 
         {/* Week navigation */}
@@ -268,19 +355,96 @@ export default function AvayaAuditorias() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
             </svg>
           </button>
-          <button onClick={() => setWeekStart(getMonday())}
+          <button onClick={() => { setWeekStart(getMonday()); setDateFilter(''); }}
             className="text-xs text-blue-600 hover:text-blue-800 font-medium ml-1 transition-colors">
             Semana actual
           </button>
         </div>
+
+        {/* Day tabs */}
+        <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-slate-100">
+          <button
+            onClick={() => setDateFilter('')}
+            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+              !dateFilter ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            Todos
+          </button>
+          {weekDays.map((day) => {
+            const d = new Date(day + 'T00:00:00');
+            const label = d.toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric' });
+            const isActive = dateFilter === day;
+            const hasRecs = daysWithRecordings.has(day);
+            return (
+              <button
+                key={day}
+                onClick={() => setDateFilter(dateFilter === day ? '' : day)}
+                className={`relative px-2.5 py-1 rounded-md text-xs font-medium transition-colors capitalize ${
+                  isActive
+                    ? 'bg-blue-600 text-white'
+                    : hasRecs
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {label}
+                {hasRecs && !isActive && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400" />
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Audit table */}
-      <AuditTable
-        selections={filtered}
-        statusFilter={statusFilter}
-        onStatusFilter={setStatusFilter}
-      />
+      {/* Agents table */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+        <div className="px-5 py-4 border-b border-slate-200">
+          <h3 className="text-sm font-medium text-slate-700">
+            Agentes con grabaciones
+            {agentGroups && (
+              <span className="ml-2 text-slate-400 font-normal">{agentGroups.length} agente{agentGroups.length !== 1 ? 's' : ''}</span>
+            )}
+          </h3>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <svg className="animate-spin h-6 w-6 text-blue-500" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          </div>
+        ) : !agentGroups || agentGroups.length === 0 ? (
+          <p className="px-5 py-10 text-center text-sm text-slate-400">
+            No hay grabaciones para esta semana
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100">
+                  <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Agente</th>
+                  <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Grabaciones</th>
+                  <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Estado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {agentGroups.map((g) => (
+                  <AgentRow
+                    key={g.agentId}
+                    agentId={g.agentId}
+                    agentName={g.agentName}
+                    recordings={g.recordings}
+                    defaultExpanded={agentGroups.length === 1}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* Upload modal */}
       {showUpload && agents.length > 0 && (
