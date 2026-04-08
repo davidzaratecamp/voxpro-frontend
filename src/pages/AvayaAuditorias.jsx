@@ -255,14 +255,14 @@ export default function AvayaAuditorias() {
   // Days that have recordings
   const daysWithRecordings = useMemo(() => {
     if (!recordings) return new Set();
-    return new Set(recordings.map((r) => r.file_date));
+    return new Set(recordings.map((r) => String(r.file_date).slice(0, 10)));
   }, [recordings]);
 
   // Filter → group by agent
   const agentGroups = useMemo(() => {
     if (!recordings) return null;
     let list = recordings;
-    if (dateFilter) list = list.filter((r) => r.file_date === dateFilter);
+    if (dateFilter) list = list.filter((r) => String(r.file_date).slice(0, 10) === dateFilter);
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(
