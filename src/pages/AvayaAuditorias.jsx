@@ -10,6 +10,7 @@ function UploadModal({ agents, onClose, onUploaded }) {
   const [form, setForm] = useState({
     agent_id: agents[0]?.id || '',
     file_date: new Date().toISOString().slice(0, 10),
+    customer_number: '',
   });
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -27,6 +28,7 @@ function UploadModal({ agents, onClose, onUploaded }) {
       fd.append('file', file);
       fd.append('agent_id', form.agent_id);
       fd.append('file_date', form.file_date);
+      if (form.customer_number) fd.append('customer_number', form.customer_number);
       await avayaApi.uploadRecording(fd);
       onUploaded();
     } catch (err) {
@@ -69,6 +71,18 @@ function UploadModal({ agents, onClose, onUploaded }) {
               onChange={(e) => set('file_date', e.target.value)}
               max={new Date().toISOString().slice(0, 10)}
               required
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">
+              Número del cliente <span className="text-slate-400 font-normal">(opcional)</span>
+            </label>
+            <input
+              type="text"
+              value={form.customer_number}
+              onChange={(e) => set('customer_number', e.target.value)}
+              placeholder="Ej: 3001234567"
               className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
             />
           </div>
@@ -163,6 +177,9 @@ function AgentRow({ agentId, agentName, recordings, defaultExpanded }) {
         >
           <td className="pl-12 pr-5 py-2.5">
             <span className="text-xs text-slate-500 truncate max-w-xs block">{r.file_name}</span>
+            {r.customer_number && (
+              <span className="text-xs text-slate-400">Cliente: {r.customer_number}</span>
+            )}
           </td>
           <td className="px-5 py-2.5">
             <span className="text-xs text-slate-500">{formatDate(r.file_date)}</span>
