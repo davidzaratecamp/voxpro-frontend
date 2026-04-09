@@ -16,6 +16,7 @@ import Usuarios from './pages/Usuarios';
 import OJTAgentes from './pages/OJTAgentes';
 import AvayaAgentes from './pages/AvayaAgentes';
 import AvayaAuditorias from './pages/AvayaAuditorias';
+import RealtimeMonitor from './pages/RealtimeMonitor';
 
 export default function App() {
   return (
@@ -40,6 +41,7 @@ export default function App() {
             <Route path="/ojt/agentes" element={<OJTAgentes />} />
             <Route path="/avaya/agentes" element={<AvayaAgentes />} />
             <Route path="/avaya/auditorias" element={<AvayaAuditorias />} />
+            <Route path="/realtime" element={<RealtimeMonitor />} />
             <Route
               path="/configuracion"
               element={
