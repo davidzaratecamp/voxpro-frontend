@@ -171,7 +171,10 @@ export default function Layout() {
           <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white text-sm font-semibold shrink-0">
             {userInitial}
           </div>
-          <span className="text-sm font-medium text-slate-700 truncate">{user?.name}</span>
+          <div className="min-w-0">
+            <span className="text-sm font-medium text-slate-700 truncate block">{user?.name}</span>
+            <span className="text-xs text-slate-400 truncate block">{user?.role}</span>
+          </div>
         </div>
         <button
           onClick={handleLogout}
