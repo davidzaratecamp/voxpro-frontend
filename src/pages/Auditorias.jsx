@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import client from '../api/client';
@@ -41,6 +41,26 @@ export default function Auditorias() {
   // Agents panel state — keyed by date { "2026-03-05": [...agents] }
   const [scannedByDate, setScannedByDate] = useState({});
   const [scanError, setScanError] = useState(null);
+
+  // Global phone search
+  const [phoneQuery, setPhoneQuery] = useState('');
+  const [phoneResults, setPhoneResults] = useState(null);
+  const [phoneSearching, setPhoneSearching] = useState(false);
+  const phoneInputRef = useRef(null);
+
+  const handlePhoneSearch = useCallback(async (q) => {
+    if (!q || q.trim().length < 7) return;
+    setPhoneSearching(true);
+    setPhoneResults(null);
+    try {
+      const res = await client.get('/recordings/by-phone', { params: { phone: q.trim() } });
+      setPhoneResults(res.data.data);
+    } catch {
+      setPhoneResults([]);
+    } finally {
+      setPhoneSearching(false);
+    }
+  }, []);
 
   // Realtime agents (only for today)
   const today = new Date().toISOString().slice(0, 10);
@@ -369,6 +389,100 @@ export default function Auditorias() {
             );
           })}
         </div>
+      </div>
+
+      {/* Global phone search */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+        <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Buscar por número telefónico</p>
+        <div className="flex gap-2">
+          <input
+            ref={phoneInputRef}
+            type="text"
+            value={phoneQuery}
+            onChange={(e) => { setPhoneQuery(e.target.value); if (!e.target.value) setPhoneResults(null); }}
+            onKeyDown={(e) => e.key === 'Enter' && handlePhoneSearch(phoneQuery)}
+            placeholder="Ej: 3164666954"
+            className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+          />
+          <button
+            onClick={() => handlePhoneSearch(phoneQuery)}
+            disabled={phoneSearching || phoneQuery.trim().length < 7}
+            className="inline-flex items-center gap-1.5 bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          >
+            {phoneSearching ? (
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            ) : (
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
+            )}
+            Buscar
+          </button>
+        </div>
+
+        {phoneResults !== null && (
+          <div className="mt-4">
+            {phoneResults.length === 0 ? (
+              <p className="text-sm text-slate-400">No se encontraron grabaciones para ese número.</p>
+            ) : (
+              <>
+                <p className="text-xs text-slate-500 mb-2">{phoneResults.length} grabación{phoneResults.length !== 1 ? 'es' : ''} encontrada{phoneResults.length !== 1 ? 's' : ''}</p>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-xs font-medium text-slate-500 uppercase tracking-wide border-b border-slate-100">
+                      <th className="py-2 text-left pr-4">Agente</th>
+                      <th className="py-2 text-left pr-4">Cliente</th>
+                      <th className="py-2 text-left pr-4">Duración</th>
+                      <th className="py-2 text-left pr-4">Fecha</th>
+                      <th className="py-2 text-right">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {phoneResults.map((rec) => {
+                      const completed = rec.selection_status === 'completed';
+                      const inProgress = rec.selection_id && !completed;
+                      return (
+                        <tr key={rec.id} className={completed ? 'bg-emerald-50' : ''}>
+                          <td className="py-2 pr-4">
+                            <span className="font-medium text-slate-800">{rec.agent_name || rec.agent_id}</span>
+                            {rec.agent_name && <span className="block text-xs text-slate-400">{rec.agent_id}</span>}
+                          </td>
+                          <td className="py-2 pr-4 text-slate-600 text-xs">{CLIENT_LABELS[rec.client_code] || rec.client_code}</td>
+                          <td className="py-2 pr-4 font-medium text-slate-800">{formatDuration(rec.call_duration)}</td>
+                          <td className="py-2 pr-4 text-slate-500 text-xs">{formatDate(rec.file_date)}</td>
+                          <td className="py-2 text-right">
+                            {completed ? (
+                              <button onClick={() => navigate(`/audit/${rec.selection_id}`)} className="inline-flex items-center rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 transition-colors">Auditada</button>
+                            ) : inProgress ? (
+                              <button onClick={() => navigate(`/audit/${rec.selection_id}`)} className="inline-flex items-center rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-600 transition-colors">Continuar</button>
+                            ) : (
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const res = await client.post('/audit/select-one', { recording_id: rec.id });
+                                    navigate(`/audit/${res.data.data.id}`);
+                                  } catch (err) {
+                                    alert(err.response?.data?.message || 'Error al seleccionar');
+                                  }
+                                }}
+                                className="inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
+                              >
+                                Auditar
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Audit selections list */}
