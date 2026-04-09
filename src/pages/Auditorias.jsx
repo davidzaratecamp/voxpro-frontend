@@ -457,8 +457,8 @@ export default function Auditorias() {
         </div>
       )}
 
-      {/* Agents panel — shown for the selected day if scanned */}
-      {dateFilter && scannedByDate[dateFilter] && (
+      {/* Agents panel — shown for the selected day if scanned (not today, covered by realtime panel) */}
+      {dateFilter && dateFilter !== today && scannedByDate[dateFilter] && (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200">
           {(() => {
             const allAgents = scannedByDate[dateFilter];
