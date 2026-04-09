@@ -42,6 +42,11 @@ export default function Auditorias() {
   const [scannedByDate, setScannedByDate] = useState({});
   const [scanError, setScanError] = useState(null);
 
+  // Realtime agents (only for today)
+  const today = new Date().toISOString().slice(0, 10);
+  const [realtimeAgents, setRealtimeAgents] = useState(null);
+  const [realtimeLoading, setRealtimeLoading] = useState(false);
+
   // Load agents by date from the backend (shared across all PCs)
   const fetchWeekAgents = useCallback(async (week, subcampaign = null) => {
     try {
@@ -56,6 +61,17 @@ export default function Auditorias() {
     const sub = clientFilter === 'claro_wcb' && campaignFilter ? campaignFilter : null;
     fetchWeekAgents(weekStart, sub);
   }, [weekStart, clientFilter, campaignFilter, fetchWeekAgents]);
+
+  // Load realtime agents when user filters by today
+  useEffect(() => {
+    if (dateFilter !== today) return;
+    setRealtimeAgents(null);
+    setRealtimeLoading(true);
+    client.get('/realtime/agents', { params: { date: today } })
+      .then((res) => setRealtimeAgents(res.data.data || []))
+      .catch(() => setRealtimeAgents([]))
+      .finally(() => setRealtimeLoading(false));
+  }, [dateFilter, today]);
 
 
   // Sync filters to URL query params
@@ -132,8 +148,9 @@ export default function Auditorias() {
     }
   };
 
-  const handleAgentClick = (agent, date) => {
+  const handleAgentClick = (agent, date, source) => {
     const params = new URLSearchParams({ date, name: agent.agent_name || '' });
+    if (source) params.set('source', source);
     navigate(`/agent-recordings/${agent.agent_id}?${params.toString()}`);
   };
 
@@ -360,6 +377,85 @@ export default function Auditorias() {
         statusFilter={statusFilter}
         onStatusFilter={setStatusFilter}
       />
+
+      {/* Realtime agents panel — shown when filtering by today */}
+      {dateFilter === today && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+            <div>
+              <span className="text-sm font-semibold text-slate-800">
+                Agentes con grabaciones — hoy (tiempo real)
+              </span>
+              {realtimeAgents && (
+                <span className="ml-2 text-xs text-slate-500">{realtimeAgents.length} agentes</span>
+              )}
+            </div>
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              En vivo
+            </span>
+          </div>
+          {realtimeLoading ? (
+            <div className="flex justify-center py-10">
+              <svg className="animate-spin h-6 w-6 text-blue-600" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            </div>
+          ) : !realtimeAgents || realtimeAgents.length === 0 ? (
+            <p className="px-5 py-8 text-center text-sm text-slate-400">
+              No se encontraron llamadas para hoy
+            </p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100">
+                  <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Agente</th>
+                  <th className="text-left px-5 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">Llamadas</th>
+                  <th className="px-5 py-3" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {realtimeAgents
+                  .filter((agent) => {
+                    if (clientFilter && agent.client_code !== clientFilter) return false;
+                    if (search) {
+                      const q = search.toLowerCase();
+                      const name = (agent.agent_name || '').toLowerCase();
+                      const id = (agent.agent_id || '').toLowerCase();
+                      if (!name.includes(q) && !id.includes(q)) return false;
+                    }
+                    return true;
+                  })
+                  .map((agent) => (
+                    <tr
+                      key={agent.agent_id}
+                      onClick={() => handleAgentClick(agent, today, 'realtime')}
+                      className="hover:bg-slate-50 cursor-pointer transition-colors"
+                    >
+                      <td className="px-5 py-3">
+                        <span className="font-medium text-slate-800">{agent.agent_name || agent.agent_id}</span>
+                        {agent.agent_name && (
+                          <span className="block text-xs text-slate-400">{agent.agent_id}</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3">
+                        <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                          {agent.recording_count} llamadas
+                        </span>
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <svg className="w-4 h-4 text-slate-400 inline" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                        </svg>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
 
       {/* Agents panel — shown for the selected day if scanned */}
       {dateFilter && scannedByDate[dateFilter] && (

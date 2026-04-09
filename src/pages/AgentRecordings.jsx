@@ -8,6 +8,8 @@ export default function AgentRecordings() {
   const [searchParams] = useSearchParams();
   const date = searchParams.get('date');
   const agentName = searchParams.get('name');
+  const source = searchParams.get('source'); // 'realtime' | null
+  const isRealtime = source === 'realtime';
   const navigate = useNavigate();
 
   const [recordings, setRecordings] = useState(null);
@@ -20,18 +22,26 @@ export default function AgentRecordings() {
 
   useEffect(() => {
     if (!agentId || !date) return;
-    client
-      .get('/recordings/by-agent', { params: { agent_id: agentId, date } })
+    const endpoint = isRealtime
+      ? client.get('/realtime/agent-calls', { params: { agent_id: agentId, date } })
+      : client.get('/recordings/by-agent', { params: { agent_id: agentId, date } });
+    endpoint
       .then((res) => setRecordings(res.data.data))
       .catch(() => setRecordings([]))
       .finally(() => setLoading(false));
-  }, [agentId, date]);
+  }, [agentId, date, isRealtime]);
 
   const handleAudit = async (recording) => {
-    setSelectingId(recording.id);
+    const key = recording._realtime_call ? recording._realtime_call.registro_llamada_id : recording.id;
+    setSelectingId(key);
     try {
-      const res = await client.post('/audit/select-one', { recording_id: recording.id });
-      navigate(`/audit/${res.data.data.id}`);
+      if (recording._realtime_call) {
+        const res = await client.post('/realtime/select', { call: recording._realtime_call });
+        navigate(`/audit/${res.data.data.selection_id}`);
+      } else {
+        const res = await client.post('/audit/select-one', { recording_id: recording.id });
+        navigate(`/audit/${res.data.data.id}`);
+      }
     } catch (err) {
       console.error('Error selecting recording:', err);
     } finally {
@@ -41,6 +51,14 @@ export default function AgentRecordings() {
 
   const handlePhoneSearch = async () => {
     if (!phoneSearch.trim()) return;
+    if (isRealtime) {
+      // Búsqueda cliente-side en las llamadas ya cargadas
+      const q = phoneSearch.trim();
+      setPhoneResults(
+        (recordings || []).filter((r) => (r.call_phone || '').includes(q))
+      );
+      return;
+    }
     setSearchingPhone(true);
     setPhoneResults(null);
     try {
@@ -61,6 +79,8 @@ export default function AgentRecordings() {
       ? recordings.filter((r) => (r.call_phone || '').includes(phoneFilter.trim()))
       : recordings
     : [];
+
+  const getRecKey = (rec) => rec._realtime_call ? rec._realtime_call.registro_llamada_id : rec.id;
 
   // Stats derived from all recordings (not filtered)
   const totalDuration = recordings ? recordings.reduce((sum, r) => sum + (r.call_duration || 0), 0) : 0;
@@ -167,8 +187,8 @@ export default function AgentRecordings() {
                               ) : inProgress ? (
                                 <button onClick={() => navigate(`/audit/${rec.selection_id}`)} className="inline-flex items-center gap-1.5 bg-amber-500 text-white rounded-lg px-4 py-1.5 text-xs font-medium hover:bg-amber-600 transition-colors">Continuar</button>
                               ) : (
-                                <button onClick={() => handleAudit(rec)} disabled={selectingId === rec.id} className="inline-flex items-center gap-1.5 bg-blue-600 text-white rounded-lg px-4 py-1.5 text-xs font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors">
-                                  {selectingId === rec.id ? <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg> : 'Auditar'}
+                                <button onClick={() => handleAudit(rec)} disabled={selectingId === getRecKey(rec)} className="inline-flex items-center gap-1.5 bg-blue-600 text-white rounded-lg px-4 py-1.5 text-xs font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                                  {selectingId === getRecKey(rec) ? <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg> : 'Auditar'}
                                 </button>
                               )}
                             </td>
@@ -265,10 +285,10 @@ export default function AgentRecordings() {
                               ) : (
                                 <button
                                   onClick={() => handleAudit(rec)}
-                                  disabled={selectingId === rec.id}
+                                  disabled={selectingId === getRecKey(rec)}
                                   className="inline-flex items-center gap-1.5 bg-blue-600 text-white rounded-lg px-4 py-1.5 text-xs font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
                                 >
-                                  {selectingId === rec.id ? (
+                                  {selectingId === getRecKey(rec) ? (
                                     <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
                                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
