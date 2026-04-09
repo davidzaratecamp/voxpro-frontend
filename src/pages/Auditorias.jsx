@@ -1,10 +1,135 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import client from '../api/client';
 import StatusBadge from '../components/StatusBadge';
 import AuditTable from '../components/AuditTable';
 import { formatDuration, formatDate, getMonday, CLIENT_LABELS, CAMPAIGN_LABELS } from '../lib/utils';
+
+function PhoneSearch({ navigate }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState(null);
+  const [searching, setSearching] = useState(false);
+
+  const handleSearch = async () => {
+    if (query.trim().length < 7) return;
+    setSearching(true);
+    setResults(null);
+    try {
+      const res = await client.get('/recordings/by-phone', { params: { phone: query.trim() } });
+      setResults(res.data.data);
+    } catch {
+      setResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-xl transition-colors"
+      >
+        <span className="flex items-center gap-2">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
+          </svg>
+          Buscar por número telefónico
+        </span>
+        <svg className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 pt-3 border-t border-slate-100">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => { setQuery(e.target.value); if (!e.target.value) setResults(null); }}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              placeholder="Ej: 3164666954"
+              className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+            />
+            <button
+              onClick={handleSearch}
+              disabled={searching || query.trim().length < 7}
+              className="inline-flex items-center gap-1.5 bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {searching ? (
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              ) : 'Buscar'}
+            </button>
+          </div>
+
+          {results !== null && (
+            <div className="mt-4">
+              {results.length === 0 ? (
+                <p className="text-sm text-slate-400">No se encontraron grabaciones para ese número.</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-xs font-medium text-slate-500 uppercase tracking-wide border-b border-slate-100">
+                      <th className="py-2 text-left pr-4">Agente</th>
+                      <th className="py-2 text-left pr-4">Cliente</th>
+                      <th className="py-2 text-left pr-4">Duración</th>
+                      <th className="py-2 text-left pr-4">Fecha</th>
+                      <th className="py-2 text-right">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {results.map((rec) => {
+                      const done = rec.selection_status === 'completed';
+                      const inProg = rec.selection_id && !done;
+                      return (
+                        <tr key={rec.id} className={done ? 'bg-emerald-50' : ''}>
+                          <td className="py-2 pr-4">
+                            <span className="font-medium text-slate-800">{rec.agent_name || rec.agent_id}</span>
+                            {rec.agent_name && <span className="block text-xs text-slate-400">{rec.agent_id}</span>}
+                          </td>
+                          <td className="py-2 pr-4 text-slate-600 text-xs">{CLIENT_LABELS[rec.client_code] || rec.client_code}</td>
+                          <td className="py-2 pr-4 font-medium text-slate-800">{formatDuration(rec.call_duration)}</td>
+                          <td className="py-2 pr-4 text-slate-500 text-xs">{formatDate(rec.file_date)}</td>
+                          <td className="py-2 text-right">
+                            {done ? (
+                              <button onClick={() => navigate(`/audit/${rec.selection_id}`)} className="inline-flex items-center rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 transition-colors">Auditada</button>
+                            ) : inProg ? (
+                              <button onClick={() => navigate(`/audit/${rec.selection_id}`)} className="inline-flex items-center rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-600 transition-colors">Continuar</button>
+                            ) : (
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const res = await client.post('/audit/select-one', { recording_id: rec.id });
+                                    navigate(`/audit/${res.data.data.id}`);
+                                  } catch (err) {
+                                    alert(err.response?.data?.message || 'Error');
+                                  }
+                                }}
+                                className="inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
+                              >
+                                Auditar
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Todos los estados' },
@@ -41,27 +166,6 @@ export default function Auditorias() {
   // Agents panel state — keyed by date { "2026-03-05": [...agents] }
   const [scannedByDate, setScannedByDate] = useState({});
   const [scanError, setScanError] = useState(null);
-
-  // Global phone search
-  const [phoneOpen, setPhoneOpen] = useState(false);
-  const [phoneQuery, setPhoneQuery] = useState('');
-  const [phoneResults, setPhoneResults] = useState(null);
-  const [phoneSearching, setPhoneSearching] = useState(false);
-  const phoneInputRef = useRef(null);
-
-  const handlePhoneSearch = useCallback(async (q) => {
-    if (!q || q.trim().length < 7) return;
-    setPhoneSearching(true);
-    setPhoneResults(null);
-    try {
-      const res = await client.get('/recordings/by-phone', { params: { phone: q.trim() } });
-      setPhoneResults(res.data.data);
-    } catch {
-      setPhoneResults([]);
-    } finally {
-      setPhoneSearching(false);
-    }
-  }, []);
 
   // Realtime agents (only for today)
   const today = new Date().toISOString().slice(0, 10);
@@ -393,118 +497,7 @@ export default function Auditorias() {
       </div>
 
       {/* Global phone search */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-        <button
-          onClick={() => setPhoneOpen((o) => !o)}
-          className="w-full flex items-center justify-between px-4 py-3 text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-xl transition-colors"
-        >
-          <span className="flex items-center gap-2">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25z" />
-            </svg>
-            Buscar por número telefónico
-          </span>
-          <svg
-            className={`w-4 h-4 transition-transform ${phoneOpen ? 'rotate-180' : ''}`}
-            fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-          </svg>
-        </button>
-
-        {phoneOpen && (
-        <div className="px-4 pb-4 border-t border-slate-100 pt-3">
-        <div className="flex gap-2">
-          <input
-            ref={phoneInputRef}
-            type="text"
-            value={phoneQuery}
-            onChange={(e) => { setPhoneQuery(e.target.value); if (!e.target.value) setPhoneResults(null); }}
-            onKeyDown={(e) => e.key === 'Enter' && handlePhoneSearch(phoneQuery)}
-            placeholder="Ej: 3164666954"
-            className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
-          />
-          <button
-            onClick={() => handlePhoneSearch(phoneQuery)}
-            disabled={phoneSearching || phoneQuery.trim().length < 7}
-            className="inline-flex items-center gap-1.5 bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            {phoneSearching ? (
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-            ) : (
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-              </svg>
-            )}
-            Buscar
-          </button>
-        </div>
-
-        {phoneResults !== null && (
-          <div className="mt-4">
-            {phoneResults.length === 0 ? (
-              <p className="text-sm text-slate-400">No se encontraron grabaciones para ese número.</p>
-            ) : (
-              <>
-                <p className="text-xs text-slate-500 mb-2">{phoneResults.length} grabación{phoneResults.length !== 1 ? 'es' : ''} encontrada{phoneResults.length !== 1 ? 's' : ''}</p>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-xs font-medium text-slate-500 uppercase tracking-wide border-b border-slate-100">
-                      <th className="py-2 text-left pr-4">Agente</th>
-                      <th className="py-2 text-left pr-4">Cliente</th>
-                      <th className="py-2 text-left pr-4">Duración</th>
-                      <th className="py-2 text-left pr-4">Fecha</th>
-                      <th className="py-2 text-right">Acción</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {phoneResults.map((rec) => {
-                      const completed = rec.selection_status === 'completed';
-                      const inProgress = rec.selection_id && !completed;
-                      return (
-                        <tr key={rec.id} className={completed ? 'bg-emerald-50' : ''}>
-                          <td className="py-2 pr-4">
-                            <span className="font-medium text-slate-800">{rec.agent_name || rec.agent_id}</span>
-                            {rec.agent_name && <span className="block text-xs text-slate-400">{rec.agent_id}</span>}
-                          </td>
-                          <td className="py-2 pr-4 text-slate-600 text-xs">{CLIENT_LABELS[rec.client_code] || rec.client_code}</td>
-                          <td className="py-2 pr-4 font-medium text-slate-800">{formatDuration(rec.call_duration)}</td>
-                          <td className="py-2 pr-4 text-slate-500 text-xs">{formatDate(rec.file_date)}</td>
-                          <td className="py-2 text-right">
-                            {completed ? (
-                              <button onClick={() => navigate(`/audit/${rec.selection_id}`)} className="inline-flex items-center rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 transition-colors">Auditada</button>
-                            ) : inProgress ? (
-                              <button onClick={() => navigate(`/audit/${rec.selection_id}`)} className="inline-flex items-center rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-600 transition-colors">Continuar</button>
-                            ) : (
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    const res = await client.post('/audit/select-one', { recording_id: rec.id });
-                                    navigate(`/audit/${res.data.data.id}`);
-                                  } catch (err) {
-                                    alert(err.response?.data?.message || 'Error al seleccionar');
-                                  }
-                                }}
-                                className="inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
-                              >
-                                Auditar
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </>
-            )}
-          </div>
-        </div>
-        )}
-      </div>
+      <PhoneSearch navigate={navigate} userClientCodes={user?.client_codes || []} />
 
       {/* Audit selections list */}
       <AuditTable
