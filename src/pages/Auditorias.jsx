@@ -173,9 +173,10 @@ export default function Auditorias() {
   const [realtimeLoading, setRealtimeLoading] = useState(false);
 
   // Load agents by date from the backend (shared across all PCs)
-  const fetchWeekAgents = useCallback(async (week, subcampaign = null) => {
+  const fetchWeekAgents = useCallback(async (week, clientCode = null, subcampaign = null) => {
     try {
       const params = { week_start: week };
+      if (clientCode) params.client = clientCode;
       if (subcampaign) params.subcampaign = subcampaign;
       const res = await client.get('/scan/week-agents', { params });
       setScannedByDate(res.data.data || {});
@@ -183,8 +184,7 @@ export default function Auditorias() {
   }, []);
 
   useEffect(() => {
-    const sub = clientFilter === 'claro_wcb' && campaignFilter ? campaignFilter : null;
-    fetchWeekAgents(weekStart, sub);
+    fetchWeekAgents(weekStart, clientFilter || null, campaignFilter || null);
   }, [weekStart, clientFilter, campaignFilter, fetchWeekAgents]);
 
   // Load realtime agents when user filters by today
@@ -263,7 +263,7 @@ export default function Auditorias() {
       const res = await client.post('/scan/daily', { date: scanDate }, { timeout: 120000 });
       const { date: returnedDate } = res.data.data;
       const d = returnedDate || scanDate;
-      await fetchWeekAgents(weekStart);
+      await fetchWeekAgents(weekStart, clientFilter || null, campaignFilter || null);
       setDateFilter(d);
     } catch (err) {
       console.error('Error scanning:', err);
