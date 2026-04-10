@@ -19,7 +19,7 @@ const STATUS_LABELS = {
 const EMPTY_FORM = {
   nombre_completo: '',
   cedula: '',
-  aware_source_id: '',
+  aware_source_ids: [],
   client_code: '',
   fecha_ingreso: new Date().toISOString().slice(0, 10),
   notas: '',
@@ -34,7 +34,7 @@ function AgentModal({ agent, awareSources, allowedClientCodes, onClose, onSaved 
       ? {
           nombre_completo: agent.nombre_completo,
           cedula: agent.cedula,
-          aware_source_id: String(agent.aware_source_id),
+          aware_source_ids: (agent.aware_source_ids || []).map(Number),
           client_code: agent.client_code,
           fecha_ingreso: agent.fecha_ingreso?.slice(0, 10) || '',
           notas: agent.notas || '',
@@ -50,13 +50,14 @@ function AgentModal({ agent, awareSources, allowedClientCodes, onClose, onSaved 
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (form.aware_source_ids.length === 0) {
+      setError('Selecciona al menos un servidor Aware');
+      return;
+    }
     setError(null);
     setSaving(true);
     try {
-      const payload = {
-        ...form,
-        aware_source_id: Number(form.aware_source_id),
-      };
+      const payload = { ...form };
       if (isEdit) {
         await ojtApi.updateAgent(agent.id, payload);
       } else {
@@ -128,22 +129,40 @@ function AgentModal({ agent, awareSources, allowedClientCodes, onClose, onSaved 
               />
             </div>
 
-            {/* Aware Source */}
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Servidor Aware</label>
-              <select
-                required
-                value={form.aware_source_id}
-                onChange={(e) => setField('aware_source_id', e.target.value)}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-400 bg-white"
-              >
-                <option value="">Seleccionar servidor...</option>
-                {awareSources.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.folder_name} — {s.client_name}
-                  </option>
-                ))}
-              </select>
+            {/* Aware Sources — checkboxes agrupados por cliente */}
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-slate-600 mb-2">
+                Servidores Aware <span className="text-slate-400 font-normal">(selecciona todos los que apliquen)</span>
+              </label>
+              {awareSources.length === 0 ? (
+                <p className="text-xs text-slate-400">Cargando servidores...</p>
+              ) : (
+                <div className="border border-slate-200 rounded-lg p-3 max-h-40 overflow-y-auto space-y-1">
+                  {awareSources.map((s) => {
+                    const checked = form.aware_source_ids.includes(s.id);
+                    return (
+                      <label key={s.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 rounded px-1 py-0.5">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            const ids = e.target.checked
+                              ? [...form.aware_source_ids, s.id]
+                              : form.aware_source_ids.filter((id) => id !== s.id);
+                            setField('aware_source_ids', ids);
+                          }}
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-400"
+                        />
+                        <span className="text-sm text-slate-700 font-mono">{s.folder_name}</span>
+                        <span className="text-xs text-slate-400">— {s.client_name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+              {form.aware_source_ids.length === 0 && (
+                <p className="text-xs text-red-500 mt-1">Selecciona al menos un servidor</p>
+              )}
             </div>
 
             {/* Cliente / Campaña */}
@@ -365,7 +384,7 @@ export default function OJTAgentes() {
                 <th className="px-4 py-3 text-left font-medium">Nombre</th>
                 <th className="px-4 py-3 text-left font-medium">Cédula</th>
                 <th className="px-4 py-3 text-left font-medium">Campaña</th>
-                <th className="px-4 py-3 text-left font-medium">Servidor Aware</th>
+                <th className="px-4 py-3 text-left font-medium">Servidores Aware</th>
                 <th className="px-4 py-3 text-left font-medium">Ingreso</th>
                 {tab === 'historial' && (
                   <th className="px-4 py-3 text-left font-medium">Estado</th>
@@ -397,7 +416,7 @@ export default function OJTAgentes() {
                         {clientLabel(a.client_code)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-slate-600 text-xs font-mono">{a.aware_folder}</td>
+                    <td className="px-4 py-3 text-slate-600 text-xs font-mono">{a.aware_folders || '—'}</td>
                     <td className="px-4 py-3 text-slate-500 text-xs">
                       {a.fecha_ingreso?.slice(0, 10)}
                     </td>
