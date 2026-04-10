@@ -537,13 +537,40 @@ export default function Auditorias() {
       {/* Realtime agents panel — shown when filtering by today */}
       {dateFilter === today && (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+          {(() => {
+            // Calcular agentes filtrados para el panel realtime
+            const allCoordAgentIds = coordinatorFilter && coordinatorFilter !== '__unassigned__'
+              ? new Set((coordinators.find((c) => String(c.id) === coordinatorFilter)?.agent_ids || []).map(String))
+              : null;
+            const allAssignedIds = coordinatorFilter === '__unassigned__'
+              ? new Set(coordinators.flatMap((c) => (c.agent_ids || []).map(String)))
+              : null;
+
+            const filteredRealtime = (realtimeAgents || []).filter((agent) => {
+              if (clientFilter && agent.client_code !== clientFilter) return false;
+              if (coordinatorFilter === '__unassigned__') {
+                if (allAssignedIds.has(String(agent.agent_id))) return false;
+              } else if (allCoordAgentIds) {
+                if (!allCoordAgentIds.has(String(agent.agent_id))) return false;
+              }
+              if (search) {
+                const q = search.toLowerCase();
+                const name = (agent.agent_name || '').toLowerCase();
+                const id = (agent.agent_id || '').toLowerCase();
+                if (!name.includes(q) && !id.includes(q)) return false;
+              }
+              return true;
+            });
+
+            return (
+              <>
           <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
             <div>
               <span className="text-sm font-semibold text-slate-800">
                 Agentes con grabaciones — hoy (tiempo real)
               </span>
               {realtimeAgents && (
-                <span className="ml-2 text-xs text-slate-500">{realtimeAgents.length} agentes</span>
+                <span className="ml-2 text-xs text-slate-500">{filteredRealtime.length} agentes</span>
               )}
             </div>
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
@@ -558,7 +585,7 @@ export default function Auditorias() {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
             </div>
-          ) : !realtimeAgents || realtimeAgents.length === 0 ? (
+          ) : filteredRealtime.length === 0 ? (
             <p className="px-5 py-8 text-center text-sm text-slate-400">
               No se encontraron llamadas para hoy
             </p>
@@ -572,17 +599,7 @@ export default function Auditorias() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {realtimeAgents
-                  .filter((agent) => {
-                    if (clientFilter && agent.client_code !== clientFilter) return false;
-                    if (search) {
-                      const q = search.toLowerCase();
-                      const name = (agent.agent_name || '').toLowerCase();
-                      const id = (agent.agent_id || '').toLowerCase();
-                      if (!name.includes(q) && !id.includes(q)) return false;
-                    }
-                    return true;
-                  })
+                {filteredRealtime
                   .map((agent) => (
                     <tr
                       key={agent.agent_id}
@@ -610,6 +627,9 @@ export default function Auditorias() {
               </tbody>
             </table>
           )}
+              </>
+            );
+          })()}
         </div>
       )}
 
