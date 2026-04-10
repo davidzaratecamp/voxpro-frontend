@@ -32,19 +32,27 @@ function AgentBadge({ agent, onRemove }) {
 function CoordinatorCard({ coord, onRemoveAgent, onAddAgents, onDeactivate, saving }) {
   const [expanded, setExpanded] = useState(false);
   const activeCount = coord.agents.filter((a) => a.active_this_week).length;
+  const isInactive = !coord.active;
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <div className={`rounded-xl border shadow-sm overflow-hidden ${isInactive ? 'bg-slate-50 border-slate-200 opacity-75' : 'bg-white border-slate-200'}`}>
       <button
         onClick={() => setExpanded((e) => !e)}
-        className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors text-left"
+        className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-100 transition-colors text-left"
       >
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-sm flex-shrink-0">
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm flex-shrink-0 ${isInactive ? 'bg-slate-200 text-slate-400' : 'bg-blue-100 text-blue-600'}`}>
             {coord.name.charAt(0)}
           </div>
           <div>
-            <p className="text-sm font-semibold text-slate-800">{coord.name}</p>
+            <div className="flex items-center gap-2">
+              <p className={`text-sm font-semibold ${isInactive ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{coord.name}</p>
+              {isInactive && (
+                <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-600 border border-red-200">
+                  Inactivo — pendiente eliminar
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate-400">
               {coord.agents.length} agentes asignados
               {activeCount > 0 && (
@@ -71,39 +79,53 @@ function CoordinatorCard({ coord, onRemoveAgent, onAddAgents, onDeactivate, savi
 
       {expanded && (
         <div className="px-5 pb-4 border-t border-slate-100 pt-3">
-          {coord.agents.length === 0 ? (
-            <p className="text-sm text-slate-400 mb-3">Sin agentes asignados</p>
-          ) : (
-            <div className="flex flex-wrap gap-2 mb-3">
-              {coord.agents.map((agent) => (
-                <AgentBadge
-                  key={agent.agent_id}
-                  agent={agent}
-                  onRemove={(id) => onRemoveAgent(coord.id, id)}
-                />
-              ))}
+          {isInactive ? (
+            <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-xs text-red-700 leading-relaxed">
+              <p className="font-semibold mb-1">Coordinador desactivado</p>
+              <p>
+                Para eliminar este usuario del sistema, envía un correo a{' '}
+                <span className="font-semibold">usuarios@tu-empresa.com</span> indicando
+                el nombre <span className="font-semibold">{coord.name}</span> y solicitando
+                la eliminación de la cuenta.
+              </p>
             </div>
+          ) : (
+            <>
+              {coord.agents.length === 0 ? (
+                <p className="text-sm text-slate-400 mb-3">Sin agentes asignados</p>
+              ) : (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {coord.agents.map((agent) => (
+                    <AgentBadge
+                      key={agent.agent_id}
+                      agent={agent}
+                      onRemove={(id) => onRemoveAgent(coord.id, id)}
+                    />
+                  ))}
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => onAddAgents(coord)}
+                  className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                  Asignar agentes sin coordinador
+                </button>
+                <button
+                  onClick={() => onDeactivate(coord)}
+                  className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-medium transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M22 10.5h-6m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
+                  </svg>
+                  Desactivar coordinador
+                </button>
+              </div>
+            </>
           )}
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => onAddAgents(coord)}
-              className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              Asignar agentes sin coordinador
-            </button>
-            <button
-              onClick={() => onDeactivate(coord)}
-              className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-medium transition-colors"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M22 10.5h-6m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
-              </svg>
-              Desactivar coordinador
-            </button>
-          </div>
         </div>
       )}
     </div>
@@ -272,11 +294,13 @@ export default function HC() {
     await patchCoordinator(assignTarget.id, newIds);
   };
 
-  const totalAssigned = data?.data.reduce((sum, c) => sum + c.agents.length, 0) ?? 0;
+  const activeCoords = data?.data.filter((c) => c.active) ?? [];
+  const totalAssigned = activeCoords.reduce((sum, c) => sum + c.agents.length, 0);
   const totalUnassigned = data?.unassigned.length ?? 0;
-  const totalActive = data?.data.reduce(
+  const totalActive = activeCoords.reduce(
     (sum, c) => sum + c.agents.filter((a) => a.active_this_week).length, 0
-  ) ?? 0;
+  );
+  const totalInactive = (data?.data.length ?? 0) - activeCoords.length;
 
   return (
     <div className="space-y-6">
@@ -318,8 +342,13 @@ export default function HC() {
         {data && (
           <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-slate-100">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
-              {data.data.length} coordinadores
+              {activeCoords.length} coordinadores activos
             </span>
+            {totalInactive > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-medium text-red-600">
+                {totalInactive} pendiente{totalInactive > 1 ? 's' : ''} eliminar
+              </span>
+            )}
             <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
               {totalAssigned} agentes asignados
             </span>
