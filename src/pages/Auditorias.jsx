@@ -392,7 +392,9 @@ export default function Auditorias() {
             >
               <option value="">Todos los coordinadores</option>
               {coordinators.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+                <option key={c.id} value={c.id}>
+                  {c.name}{c.campaign ? ` (${c.campaign === 'ventas' ? 'Ventas' : 'Customer'})` : ''}
+                </option>
               ))}
               <option value="__unassigned__">Sin coordinador</option>
             </select>

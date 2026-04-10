@@ -29,7 +29,12 @@ function AgentBadge({ agent, onRemove }) {
   );
 }
 
-function CoordinatorCard({ coord, onRemoveAgent, onAddAgents, onDeactivate, saving }) {
+const CAMPAIGN_STYLES = {
+  ventas:   { label: 'Ventas',   cls: 'bg-blue-50 text-blue-700 border-blue-200' },
+  customer: { label: 'Customer', cls: 'bg-violet-50 text-violet-700 border-violet-200' },
+};
+
+function CoordinatorCard({ coord, onRemoveAgent, onAddAgents, onDeactivate, onCampaignChange, saving }) {
   const [expanded, setExpanded] = useState(false);
   const activeCount = coord.agents.filter((a) => a.active_this_week).length;
   const isInactive = !coord.active;
@@ -45,11 +50,19 @@ function CoordinatorCard({ coord, onRemoveAgent, onAddAgents, onDeactivate, savi
             {coord.name.charAt(0)}
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <p className={`text-sm font-semibold ${isInactive ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{coord.name}</p>
-              {isInactive && (
+              {isInactive ? (
                 <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-600 border border-red-200">
                   Inactivo — pendiente eliminar
+                </span>
+              ) : coord.campaign ? (
+                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border ${CAMPAIGN_STYLES[coord.campaign]?.cls}`}>
+                  {CAMPAIGN_STYLES[coord.campaign]?.label}
+                </span>
+              ) : (
+                <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-400">
+                  Sin campaña
                 </span>
               )}
             </div>
@@ -112,25 +125,47 @@ function CoordinatorCard({ coord, onRemoveAgent, onAddAgents, onDeactivate, savi
                   ))}
                 </div>
               )}
-              <div className="flex items-center justify-between">
-                <button
-                  onClick={() => onAddAgents(coord)}
-                  className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                  </svg>
-                  Asignar agentes sin coordinador
-                </button>
-                <button
-                  onClick={() => onDeactivate(coord)}
-                  className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-medium transition-colors"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M22 10.5h-6m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
-                  </svg>
-                  Desactivar coordinador
-                </button>
+              <div className="flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-slate-100 mt-2">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-slate-400 font-medium">Campaña:</span>
+                  <div className="flex gap-1.5">
+                    {[{ value: 'ventas', label: 'Ventas' }, { value: 'customer', label: 'Customer' }, { value: null, label: 'Ninguna' }].map((opt) => (
+                      <button
+                        key={String(opt.value)}
+                        onClick={() => onCampaignChange(coord.id, opt.value)}
+                        className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                          coord.campaign === opt.value
+                            ? opt.value === 'ventas' ? 'bg-blue-600 text-white border-blue-600'
+                              : opt.value === 'customer' ? 'bg-violet-600 text-white border-violet-600'
+                              : 'bg-slate-600 text-white border-slate-600'
+                            : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => onAddAgents(coord)}
+                    className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    Asignar agentes
+                  </button>
+                  <button
+                    onClick={() => onDeactivate(coord)}
+                    className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-medium transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M22 10.5h-6m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
+                    </svg>
+                    Desactivar
+                  </button>
+                </div>
               </div>
             </>
           )}
@@ -275,6 +310,18 @@ export default function HC() {
     patchCoordinator(coordId, newIds);
   };
 
+  const handleCampaignChange = async (coordId, campaign) => {
+    setSaving(coordId);
+    try {
+      await client.patch(`/hc/coordinator/${coordId}/campaign`, { campaign });
+      await load(weekStart);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error al actualizar campaña');
+    } finally {
+      setSaving(null);
+    }
+  };
+
   const handleDeactivate = async (coord) => {
     const agentCount = coord.agents.length;
     const msg = agentCount > 0
@@ -392,6 +439,7 @@ export default function HC() {
                 onRemoveAgent={handleRemoveAgent}
                 onAddAgents={setAssignTarget}
                 onDeactivate={handleDeactivate}
+                onCampaignChange={handleCampaignChange}
                 saving={saving === coord.id}
               />
             ))}
