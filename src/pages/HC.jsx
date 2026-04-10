@@ -83,8 +83,16 @@ function CoordinatorCard({ coord, onRemoveAgent, onAddAgents, onDeactivate, savi
             <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-xs text-red-700 leading-relaxed">
               <p className="font-semibold mb-1">Coordinador desactivado</p>
               <p>
-                Para eliminar este usuario del sistema, envía un correo a{' '}
-                <a href={`mailto:hanny.poloche@asisteing.com?subject=Solicitud eliminación de usuario&body=Buen día Hanny,%0A%0ASolicito la eliminación del usuario ${encodeURIComponent(coord.name)} de la plataforma VoxPro.%0A%0AGracias.`} className="font-semibold underline hover:text-red-900">hanny.poloche@asisteing.com</a> indicando
+                Para eliminar este usuario del sistema,{' '}
+                <a
+                  href={`https://10.255.255.11/?view=compose&to=hanny.poloche@asisteing.com&subject=${encodeURIComponent('Solicitud eliminación de usuario VoxPro')}&body=${encodeURIComponent(`Buen día Hanny,\n\nSolicito la eliminación del usuario "${coord.name}" de la plataforma VoxPro.\n\nGracias.`)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-semibold underline hover:text-red-900"
+                >
+                  envía un correo por Zimbra
+                </a>{' '}
+                a <span className="font-semibold">hanny.poloche@asisteing.com</span> indicando
                 el nombre <span className="font-semibold">{coord.name}</span> y solicitando
                 la eliminación de la cuenta.
               </p>
