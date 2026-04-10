@@ -84,7 +84,7 @@ function CoordinatorCard({ coord, onRemoveAgent, onAddAgents, onDeactivate, savi
               <p className="font-semibold mb-1">Coordinador desactivado</p>
               <p>
                 Para eliminar este usuario del sistema, envía un correo a{' '}
-                <span className="font-semibold">usuarios@tu-empresa.com</span> indicando
+                <a href={`mailto:hanny.poloche@asisteing.com?subject=Solicitud eliminación de usuario&body=Buen día Hanny,%0A%0ASolicito la eliminación del usuario ${encodeURIComponent(coord.name)} de la plataforma VoxPro.%0A%0AGracias.`} className="font-semibold underline hover:text-red-900">hanny.poloche@asisteing.com</a> indicando
                 el nombre <span className="font-semibold">{coord.name}</span> y solicitando
                 la eliminación de la cuenta.
               </p>
