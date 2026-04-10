@@ -29,7 +29,7 @@ function AgentBadge({ agent, onRemove }) {
   );
 }
 
-function CoordinatorCard({ coord, onRemoveAgent, onAddAgents, saving }) {
+function CoordinatorCard({ coord, onRemoveAgent, onAddAgents, onDeactivate, saving }) {
   const [expanded, setExpanded] = useState(false);
   const activeCount = coord.agents.filter((a) => a.active_this_week).length;
 
@@ -84,15 +84,26 @@ function CoordinatorCard({ coord, onRemoveAgent, onAddAgents, saving }) {
               ))}
             </div>
           )}
-          <button
-            onClick={() => onAddAgents(coord)}
-            className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            Asignar agentes sin coordinador
-          </button>
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => onAddAgents(coord)}
+              className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              Asignar agentes sin coordinador
+            </button>
+            <button
+              onClick={() => onDeactivate(coord)}
+              className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-medium transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M22 10.5h-6m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
+              </svg>
+              Desactivar coordinador
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -234,6 +245,23 @@ export default function HC() {
     patchCoordinator(coordId, newIds);
   };
 
+  const handleDeactivate = async (coord) => {
+    const agentCount = coord.agents.length;
+    const msg = agentCount > 0
+      ? `¿Desactivar a ${coord.name}? Sus ${agentCount} agentes quedarán sin coordinador.`
+      : `¿Desactivar a ${coord.name}?`;
+    if (!window.confirm(msg)) return;
+    setSaving(coord.id);
+    try {
+      await client.delete(`/hc/coordinator/${coord.id}`);
+      await load(weekStart);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error al desactivar');
+    } finally {
+      setSaving(null);
+    }
+  };
+
   const handleAssignConfirm = async (selectedIds) => {
     if (!assignTarget || selectedIds.length === 0) return;
     const coord = data.data.find((c) => c.id === assignTarget.id);
@@ -326,6 +354,7 @@ export default function HC() {
                 coord={coord}
                 onRemoveAgent={handleRemoveAgent}
                 onAddAgents={setAssignTarget}
+                onDeactivate={handleDeactivate}
                 saving={saving === coord.id}
               />
             ))}
