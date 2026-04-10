@@ -167,25 +167,37 @@ export default function Auditorias() {
   const [scannedByDate, setScannedByDate] = useState({});
   const [scanError, setScanError] = useState(null);
 
+  // Coordinator filter (supervisor only)
+  const [coordinatorFilter, setCoordinatorFilter] = useState('');
+  const [coordinators, setCoordinators] = useState([]);
+
+  useEffect(() => {
+    if (user?.role !== 'supervisor_calidad') return;
+    client.get('/hc/coordinators')
+      .then((res) => setCoordinators(res.data.data || []))
+      .catch(() => {});
+  }, [user]);
+
   // Realtime agents (only for today)
   const today = new Date().toISOString().slice(0, 10);
   const [realtimeAgents, setRealtimeAgents] = useState(null);
   const [realtimeLoading, setRealtimeLoading] = useState(false);
 
   // Load agents by date from the backend (shared across all PCs)
-  const fetchWeekAgents = useCallback(async (week, clientCode = null, subcampaign = null) => {
+  const fetchWeekAgents = useCallback(async (week, clientCode = null, subcampaign = null, coordId = null) => {
     try {
       const params = { week_start: week };
       if (clientCode) params.client = clientCode;
       if (subcampaign) params.subcampaign = subcampaign;
+      if (coordId) params.coordinator_id = coordId;
       const res = await client.get('/scan/week-agents', { params });
       setScannedByDate(res.data.data || {});
     } catch { /* ignore */ }
   }, []);
 
   useEffect(() => {
-    fetchWeekAgents(weekStart, clientFilter || null, campaignFilter || null);
-  }, [weekStart, clientFilter, campaignFilter, fetchWeekAgents]);
+    fetchWeekAgents(weekStart, clientFilter || null, campaignFilter || null, coordinatorFilter || null);
+  }, [weekStart, clientFilter, campaignFilter, coordinatorFilter, fetchWeekAgents]);
 
   // Load realtime agents when user filters by today
   useEffect(() => {
@@ -263,7 +275,7 @@ export default function Auditorias() {
       const res = await client.post('/scan/daily', { date: scanDate }, { timeout: 120000 });
       const { date: returnedDate } = res.data.data;
       const d = returnedDate || scanDate;
-      await fetchWeekAgents(weekStart, clientFilter || null, campaignFilter || null);
+      await fetchWeekAgents(weekStart, clientFilter || null, campaignFilter || null, coordinatorFilter || null);
       setDateFilter(d);
     } catch (err) {
       console.error('Error scanning:', err);
@@ -369,6 +381,20 @@ export default function Auditorias() {
               {clientOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
+            </select>
+          )}
+
+          {user?.role === 'supervisor_calidad' && coordinators.length > 0 && (
+            <select
+              value={coordinatorFilter}
+              onChange={(e) => setCoordinatorFilter(e.target.value)}
+              className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all"
+            >
+              <option value="">Todos los coordinadores</option>
+              {coordinators.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+              <option value="__unassigned__">Sin coordinador</option>
             </select>
           )}
 
