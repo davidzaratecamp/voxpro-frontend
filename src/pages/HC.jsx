@@ -3,6 +3,112 @@ import { useAuth } from '../context/AuthContext';
 import client from '../api/client';
 import { getMonday } from '../lib/utils';
 
+const CAMPAIGN_OPTIONS = [
+  { value: 'ventas', label: 'Ventas' },
+  { value: 'customer', label: 'Customer' },
+];
+
+function RequestCoordinatorModal({ onClose }) {
+  const [form, setForm] = useState({ name: '', cedula: '', campaign: '' });
+  const [error, setError] = useState('');
+
+  const set = (field, val) => setForm((f) => ({ ...f, [field]: val }));
+
+  const handleSend = () => {
+    if (!form.name.trim()) { setError('El nombre es obligatorio'); return; }
+    if (!form.cedula.trim()) { setError('La cédula es obligatoria'); return; }
+    if (!form.campaign) { setError('Selecciona una campaña'); return; }
+
+    const campaignLabel = form.campaign === 'ventas' ? 'Ventas' : 'Customer';
+    const subject = 'Solicitud creación de coordinador — VoxPro';
+    const body =
+      `Buen día Hanny,\n\n` +
+      `Solicito la creación del siguiente coordinador en la plataforma VoxPro:\n\n` +
+      `• Nombre completo: ${form.name.trim()}\n` +
+      `• Cédula: ${form.cedula.trim()}\n` +
+      `• Campaña: ${campaignLabel}\n\n` +
+      `Gracias.`;
+
+    const url = `https://10.255.255.11/?view=compose&to=${encodeURIComponent('hanny.poloche@asisteing.com')}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(url, '_blank');
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <h3 className="text-sm font-semibold text-slate-800">Solicitar nuevo coordinador</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="px-6 py-5 space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Nombre completo</label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => set('name', e.target.value)}
+              placeholder="Ej: García López Juan David"
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Número de cédula</label>
+            <input
+              type="text"
+              value={form.cedula}
+              onChange={(e) => set('cedula', e.target.value.replace(/\D/g, ''))}
+              placeholder="Ej: 1020304050"
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Campaña</label>
+            <div className="flex gap-2">
+              {CAMPAIGN_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => set('campaign', opt.value)}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                    form.campaign === opt.value
+                      ? opt.value === 'ventas'
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-violet-600 text-white border-violet-600'
+                      : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          <p className="text-xs text-slate-400">
+            Al confirmar se abrirá Zimbra con el correo prellenado dirigido a Hanny.
+          </p>
+        </div>
+
+        <div className="flex justify-end gap-2 px-6 py-4 border-t border-slate-100">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 font-medium transition-colors">
+            Cancelar
+          </button>
+          <button
+            onClick={handleSend}
+            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          >
+            Abrir Zimbra
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AgentBadge({ agent, onRemove }) {
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
@@ -260,6 +366,7 @@ export default function HC() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(null); // coordinator id being saved
   const [assignTarget, setAssignTarget] = useState(null); // coordinator to assign to
+  const [showRequestModal, setShowRequestModal] = useState(false);
 
   const load = useCallback(async (week) => {
     setLoading(true);
@@ -359,11 +466,22 @@ export default function HC() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-slate-800">Head Count</h2>
-        <p className="text-sm text-slate-500 mt-1">
-          Gestión de agentes por coordinador — {user?.client_codes?.join(', ')}
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">Head Count</h2>
+          <p className="text-sm text-slate-500 mt-1">
+            Gestión de agentes por coordinador — {user?.client_codes?.join(', ')}
+          </p>
+        </div>
+        <button
+          onClick={() => setShowRequestModal(true)}
+          className="inline-flex items-center gap-2 bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          Solicitar coordinador
+        </button>
       </div>
 
       {/* Semana y stats */}
@@ -475,6 +593,11 @@ export default function HC() {
             </div>
           )}
         </>
+      )}
+
+      {/* Modal solicitud nuevo coordinador */}
+      {showRequestModal && (
+        <RequestCoordinatorModal onClose={() => setShowRequestModal(false)} />
       )}
 
       {/* Modal de asignación */}
