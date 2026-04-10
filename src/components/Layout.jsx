@@ -25,7 +25,7 @@ export default function Layout() {
   const isAuditor = AUDITOR_ROLES.includes(user?.role);
 
   const isAvaya = user?.role === 'coordinador_avaya';
-  const REALTIME_ROLES = new Set(['auditor', 'coordinator', 'supervisor_calidad', 'coordinador_avaya', 'formador']);
+  const REALTIME_ROLES = new Set(['auditor', 'coordinator', 'supervisor_calidad', 'formador']);
 
   const navItems = [
     ...(isAuditor ? [{
