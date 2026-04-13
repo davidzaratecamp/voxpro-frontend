@@ -6,18 +6,21 @@ import StatusBadge from '../components/StatusBadge';
 import AuditTable from '../components/AuditTable';
 import { formatDuration, formatDate, getMonday, CLIENT_LABELS, CAMPAIGN_LABELS } from '../lib/utils';
 
-function PhoneSearch({ navigate }) {
+function PhoneSearch({ navigate, user }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState(null);
   const [searching, setSearching] = useState(false);
+  const [sourceTab, setSourceTab] = useState('aware'); // 'aware' | 'zoom'
 
   const handleSearch = async () => {
     if (query.trim().length < 7) return;
     setSearching(true);
     setResults(null);
     try {
-      const res = await client.get('/recordings/by-phone', { params: { phone: query.trim() } });
+      const params = { phone: query.trim() };
+      if (user?.zoom_enabled && sourceTab === 'zoom') params.source = 'zoom';
+      const res = await client.get('/recordings/by-phone', { params });
       setResults(res.data.data);
     } catch {
       setResults([]);
@@ -45,6 +48,26 @@ function PhoneSearch({ navigate }) {
 
       {open && (
         <div className="px-4 pb-4 pt-3 border-t border-slate-100">
+          {/* Source tabs — only for zoom_enabled users */}
+          {user?.zoom_enabled && (
+            <div className="flex gap-1 mb-3 bg-slate-100 rounded-lg p-1 w-fit">
+              <button
+                onClick={() => { setSourceTab('aware'); setResults(null); }}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${sourceTab === 'aware' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                Aware
+              </button>
+              <button
+                onClick={() => { setSourceTab('zoom'); setResults(null); }}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors flex items-center gap-1 ${sourceTab === 'zoom' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M4 4h16a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm14.5 7.5l-4 2.667V9.833L18.5 12.5zM3 8v10h14V8H3z" />
+                </svg>
+                Zoom
+              </button>
+            </div>
+          )}
           <div className="flex gap-2">
             <input
               type="text"
@@ -80,6 +103,7 @@ function PhoneSearch({ navigate }) {
                       <th className="py-2 text-left pr-4">Cliente</th>
                       <th className="py-2 text-left pr-4">Duración</th>
                       <th className="py-2 text-left pr-4">Fecha</th>
+                      {user?.zoom_enabled && <th className="py-2 text-left pr-4">Fuente</th>}
                       <th className="py-2 text-right">Acción</th>
                     </tr>
                   </thead>
@@ -96,6 +120,15 @@ function PhoneSearch({ navigate }) {
                           <td className="py-2 pr-4 text-slate-600 text-xs">{CLIENT_LABELS[rec.client_code] || rec.client_code}</td>
                           <td className="py-2 pr-4 font-medium text-slate-800">{formatDuration(rec.call_duration)}</td>
                           <td className="py-2 pr-4 text-slate-500 text-xs">{formatDate(rec.file_date)}</td>
+                          {user?.zoom_enabled && (
+                            <td className="py-2 pr-4">
+                              {rec.source_type === 'zoom' ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 border border-blue-200">Zoom</span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">Aware</span>
+                              )}
+                            </td>
+                          )}
                           <td className="py-2 text-right">
                             {done ? (
                               <button onClick={() => navigate(`/audit/${rec.selection_id}`)} className="inline-flex items-center rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 transition-colors">Auditada</button>
@@ -525,7 +558,7 @@ export default function Auditorias() {
       </div>
 
       {/* Global phone search */}
-      <PhoneSearch navigate={navigate} userClientCodes={user?.client_codes || []} />
+      <PhoneSearch navigate={navigate} user={user} />
 
       {/* Audit selections list */}
       <AuditTable
