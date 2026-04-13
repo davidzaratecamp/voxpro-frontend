@@ -35,8 +35,11 @@ function RecordingRow({ rec, index, onAudit, selectingId, navigate }) {
       <td className="px-4 py-2.5 font-semibold text-slate-800">{formatDuration(rec.call_duration)}</td>
       <td className="px-4 py-2.5 text-slate-600 text-xs">{rec.call_phone || '—'}</td>
       {rec.source_type !== undefined && (
-        <td className="px-4 py-2.5">
+        <td className="px-4 py-2.5 flex items-center gap-1.5">
           <SourceBadge sourceType={rec.source_type} />
+          {rec._from_search && (
+            <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-600 border border-amber-200">búsqueda</span>
+          )}
         </td>
       )}
       <td className="px-4 py-2.5 w-px whitespace-nowrap">
@@ -163,7 +166,7 @@ export default function AgentRecordings() {
       .finally(() => setLoading(false));
   }, [agentId, date, isRealtime]);
 
-  const handleAudit = async (recording) => {
+  const handleAudit = async (recording, fromSearch = false) => {
     const key = recording._realtime_call ? recording._realtime_call.registro_llamada_id : recording.id;
     setSelectingId(key);
     try {
@@ -172,6 +175,15 @@ export default function AgentRecordings() {
         navigate(`/audit/${res.data.data.selection_id}`);
       } else {
         const res = await client.post('/audit/select-one', { recording_id: recording.id });
+        // Si viene de búsqueda, inyectarlo en la columna correcta
+        if (fromSearch) {
+          const enriched = { ...recording, selection_id: res.data.data.id, selection_status: 'selected', _from_search: true };
+          if (recording.source_type === 'zoom') {
+            setZoomRecordings((prev) => prev ? [enriched, ...prev.filter((r) => r.id !== recording.id)] : prev);
+          } else {
+            setRecordings((prev) => prev ? [enriched, ...prev.filter((r) => r.id !== recording.id)] : prev);
+          }
+        }
         navigate(`/audit/${res.data.data.id}`);
       }
     } catch (err) {
@@ -335,7 +347,7 @@ export default function AgentRecordings() {
                               ) : inProgress ? (
                                 <button onClick={() => navigate(`/audit/${rec.selection_id}`)} className="inline-flex items-center gap-1.5 bg-amber-500 text-white rounded-lg px-4 py-1.5 text-xs font-medium hover:bg-amber-600 transition-colors">Continuar</button>
                               ) : (
-                                <button onClick={() => handleAudit(rec)} disabled={selectingId === rec.id} className="inline-flex items-center gap-1.5 bg-blue-600 text-white rounded-lg px-4 py-1.5 text-xs font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                                <button onClick={() => handleAudit(rec, true)} disabled={selectingId === rec.id} className="inline-flex items-center gap-1.5 bg-blue-600 text-white rounded-lg px-4 py-1.5 text-xs font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors">
                                   {selectingId === rec.id ? <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg> : 'Auditar'}
                                 </button>
                               )}
