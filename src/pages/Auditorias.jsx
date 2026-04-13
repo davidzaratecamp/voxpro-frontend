@@ -560,13 +560,6 @@ export default function Auditorias() {
       {/* Global phone search */}
       <PhoneSearch navigate={navigate} user={user} />
 
-      {/* Audit selections list */}
-      <AuditTable
-        selections={filtered}
-        statusFilter={statusFilter}
-        onStatusFilter={setStatusFilter}
-      />
-
       {/* Realtime agents panel — shown when filtering by today */}
       {dateFilter === today && (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200">
@@ -737,6 +730,13 @@ export default function Auditorias() {
           })()}
         </div>
       )}
+
+      {/* Audit selections list */}
+      <AuditTable
+        selections={filtered}
+        statusFilter={statusFilter}
+        onStatusFilter={setStatusFilter}
+      />
 
     </div>
   );
