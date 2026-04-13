@@ -147,6 +147,7 @@ export default function AgentRecordings() {
   const [phoneSearch, setPhoneSearch] = useState('');
   const [phoneResults, setPhoneResults] = useState(null);
   const [searchingPhone, setSearchingPhone] = useState(false);
+  const [phoneSourceTab, setPhoneSourceTab] = useState('aware');
 
   useEffect(() => {
     if (!agentId || !date) return;
@@ -190,9 +191,9 @@ export default function AgentRecordings() {
     setSearchingPhone(true);
     setPhoneResults(null);
     try {
-      const res = await client.get('/recordings/by-agent-phone', {
-        params: { agent_id: agentId, date, phone: phoneSearch.trim() },
-      });
+      const params = { agent_id: agentId, date, phone: phoneSearch.trim() };
+      if (isSplitMode && phoneSourceTab === 'zoom') params.source = 'zoom';
+      const res = await client.get('/recordings/by-agent-phone', { params });
       setPhoneResults(res.data.data);
     } catch (err) {
       console.error('Error buscando por teléfono:', err);
@@ -265,6 +266,25 @@ export default function AgentRecordings() {
         {!loading && (
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 px-5 py-4">
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">Buscar llamadas por número</p>
+            {isSplitMode && (
+              <div className="flex gap-1 mb-3 bg-slate-100 rounded-lg p-1 w-fit">
+                <button
+                  onClick={() => { setPhoneSourceTab('aware'); setPhoneResults(null); }}
+                  className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${phoneSourceTab === 'aware' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  Aware
+                </button>
+                <button
+                  onClick={() => { setPhoneSourceTab('zoom'); setPhoneResults(null); }}
+                  className={`px-3 py-1 rounded-md text-xs font-medium transition-colors flex items-center gap-1 ${phoneSourceTab === 'zoom' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M4 4h16a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm14.5 7.5l-4 2.667V9.833L18.5 12.5zM3 8v10h14V8H3z" />
+                  </svg>
+                  Zoom
+                </button>
+              </div>
+            )}
             <div className="flex gap-2">
               <input
                 type="text"
