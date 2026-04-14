@@ -18,6 +18,7 @@ import AvayaAgentes from './pages/AvayaAgentes';
 import AvayaAuditorias from './pages/AvayaAuditorias';
 import RealtimeMonitor from './pages/RealtimeMonitor';
 import HC from './pages/HC';
+import DailyAnalysis from './pages/DailyAnalysis';
 
 export default function App() {
   return (
@@ -43,6 +44,7 @@ export default function App() {
             <Route path="/avaya/agentes" element={<AvayaAgentes />} />
             <Route path="/avaya/auditorias" element={<AvayaAuditorias />} />
             <Route path="/realtime" element={<RealtimeMonitor />} />
+            <Route path="/daily-analysis" element={<DailyAnalysis />} />
             <Route path="/hc" element={<HC />} />
             <Route
               path="/configuracion"
