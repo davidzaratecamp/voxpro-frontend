@@ -149,11 +149,13 @@ export default function DailyAnalysis() {
                         <tr key={a.agent_id} className="hover:bg-slate-50 transition-colors">
                           <td className="px-4 py-2.5">
                             <div className="font-medium text-slate-800 truncate max-w-[160px]">{a.agent_name || a.agent_id}</div>
-                            {(a.zoom_calls > 0) && (
-                              <div className="text-xs text-slate-400">
-                                {a.zoom_calls} Zoom + {a.total_calls} Aware
-                              </div>
-                            )}
+                            <div className="text-xs text-slate-400">
+                              {a.zoom_calls > 0 && a.total_calls > 0
+                                ? `${a.zoom_calls} Zoom + ${a.total_calls} Aware`
+                                : a.zoom_calls > 0
+                                ? `${a.zoom_calls} Zoom`
+                                : `${a.total_calls} Aware`}
+                            </div>
                           </td>
                           <td className="px-4 py-2.5 text-center text-slate-600">{a.total_calls + a.zoom_calls}</td>
                           <td className="px-4 py-2.5 text-center text-slate-600">{a.effective_calls + a.zoom_effective}</td>
