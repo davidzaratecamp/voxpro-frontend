@@ -631,11 +631,13 @@ export default function Auditorias() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredRealtime
-                  .map((agent) => (
+                  .map((agent) => {
+                    const hasRecordings = agent.qualified_count > 0;
+                    return (
                     <tr
                       key={agent.agent_id}
                       onClick={() => handleAgentClick(agent, today, 'realtime')}
-                      className="hover:bg-slate-50 cursor-pointer transition-colors"
+                      className={`cursor-pointer transition-colors ${hasRecordings ? 'bg-emerald-50 hover:bg-emerald-100' : 'hover:bg-slate-50 opacity-50'}`}
                     >
                       <td className="px-5 py-3">
                         <span className="font-medium text-slate-800">{agent.agent_name || agent.agent_id}</span>
@@ -644,9 +646,15 @@ export default function Auditorias() {
                         )}
                       </td>
                       <td className="px-5 py-3">
-                        <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
-                          {agent.recording_count} llamadas
-                        </span>
+                        {hasRecordings ? (
+                          <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+                            {agent.qualified_count} grabaciones
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-400">
+                            Sin grabaciones
+                          </span>
+                        )}
                       </td>
                       <td className="px-5 py-3 text-right">
                         <svg className="w-4 h-4 text-slate-400 inline" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
@@ -654,7 +662,8 @@ export default function Auditorias() {
                         </svg>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
               </tbody>
             </table>
           )}
