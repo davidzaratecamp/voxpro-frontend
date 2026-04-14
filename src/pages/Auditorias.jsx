@@ -138,8 +138,13 @@ function PhoneSearch({ navigate, user }) {
                               <button
                                 onClick={async () => {
                                   try {
-                                    const res = await client.post('/audit/select-one', { recording_id: rec.id });
-                                    navigate(`/audit/${res.data.data.id}`);
+                                    if (rec._realtime_call) {
+                                      const res = await client.post('/realtime/select', { call: rec._realtime_call });
+                                      navigate(`/audit/${res.data.data.selection_id}`);
+                                    } else {
+                                      const res = await client.post('/audit/select-one', { recording_id: rec.id });
+                                      navigate(`/audit/${res.data.data.id}`);
+                                    }
                                   } catch (err) {
                                     alert(err.response?.data?.message || 'Error');
                                   }
