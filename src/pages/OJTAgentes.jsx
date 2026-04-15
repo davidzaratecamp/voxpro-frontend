@@ -227,11 +227,17 @@ function AgentModal({ agent, awareSources, allowedClientCodes, onClose, onSaved 
 function GraduateModal({ agent, onClose, onConfirm }) {
   const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
   async function handleConfirm() {
     setSaving(true);
-    await onConfirm(agent.id, fecha);
-    setSaving(false);
+    setError(null);
+    try {
+      await onConfirm(agent.id, fecha);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error al graduar agente');
+      setSaving(false);
+    }
   }
 
   return (
@@ -252,6 +258,10 @@ function GraduateModal({ agent, onClose, onConfirm }) {
             className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-400"
           />
         </div>
+
+        {error && (
+          <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-2">{error}</p>
+        )}
 
         <div className="flex gap-2">
           <button
@@ -305,13 +315,9 @@ export default function OJTAgentes() {
   useEffect(() => { load(); }, [load]);
 
   async function handleGraduate(agentId, fecha) {
-    try {
-      await ojtApi.graduateAgent(agentId, fecha);
-      setModal(null);
-      load();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Error al graduar agente');
-    }
+    await ojtApi.graduateAgent(agentId, fecha);
+    setModal(null);
+    load();
   }
 
   function handleSaved() {
