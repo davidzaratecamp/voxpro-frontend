@@ -139,7 +139,8 @@ export default function AgentRecordings() {
   const date = searchParams.get('date');
   const agentName = searchParams.get('name');
   const source = searchParams.get('source');
-  const isRealtime = source === 'realtime';
+  const today = new Date().toISOString().slice(0, 10);
+  const isRealtime = source === 'realtime' && date === today;
   const navigate = useNavigate();
 
   const [recordings, setRecordings] = useState(null);
