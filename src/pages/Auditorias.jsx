@@ -9,6 +9,7 @@ import { formatDuration, formatDate, getMonday, CLIENT_LABELS, CAMPAIGN_LABELS }
 function PhoneSearch({ navigate, user }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [searchDate, setSearchDate] = useState(''); // empty = all history + today via Kraken
   const [results, setResults] = useState(null);
   const [searching, setSearching] = useState(false);
   const [sourceTab, setSourceTab] = useState('aware'); // 'aware' | 'zoom'
@@ -20,6 +21,7 @@ function PhoneSearch({ navigate, user }) {
     try {
       const params = { phone: query.trim() };
       if (user?.zoom_enabled && sourceTab === 'zoom') params.source = 'zoom';
+      if (searchDate) params.date = searchDate;
       const res = await client.get('/recordings/by-phone', { params });
       setResults(res.data.data);
     } catch {
@@ -68,6 +70,15 @@ function PhoneSearch({ navigate, user }) {
               </button>
             </div>
           )}
+          <div className="flex gap-2 mb-2">
+            <input
+              type="date"
+              value={searchDate}
+              onChange={(e) => { setSearchDate(e.target.value); setResults(null); }}
+              className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+            />
+            <span className="flex items-center text-xs text-slate-400">dejar vacío = todos los días</span>
+          </div>
           <div className="flex gap-2">
             <input
               type="text"
