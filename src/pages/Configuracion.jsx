@@ -3,7 +3,7 @@ import { criteriaApi } from '../api/criteria';
 import { useAuth } from '../context/AuthContext';
 
 const GROUPS = [
-  { key: 'claro',         label: 'Claro',         campaigns: ['claro_wcb', 'claro_hogar', 'claro_tyt'] },
+  { key: 'claro',         label: 'Claro',         campaigns: ['claro_wcb', 'claro_movil', 'claro_pymes', 'claro_hogar', 'claro_tyt'] },
   { key: 'obama',         label: 'Obama',         campaigns: ['obama_ventas', 'obama_customer'] },
   { key: 'lv',           label: 'Vital',          campaigns: ['lv_ventas', 'lv_customer'] },
   { key: 'reclutamiento', label: 'Reclutamiento', campaigns: ['reclutamiento'] },
@@ -12,6 +12,8 @@ const GROUPS = [
 // Qué client_code necesita cada campaña para ser visible
 const CAMPAIGN_CLIENT = {
   claro_wcb:      'claro_wcb',
+  claro_movil:    'claro_wcb',
+  claro_pymes:    'claro_wcb',
   claro_hogar:    'claro_hogar',
   claro_tyt:      'claro_tyt',
   obama_ventas:   'obama',
