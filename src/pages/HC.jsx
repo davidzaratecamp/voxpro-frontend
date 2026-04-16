@@ -3,12 +3,31 @@ import { useAuth } from '../context/AuthContext';
 import client from '../api/client';
 import { getMonday } from '../lib/utils';
 
-const CAMPAIGN_OPTIONS = [
-  { value: 'ventas', label: 'Ventas' },
-  { value: 'customer', label: 'Customer' },
-];
+const CAMPAIGNS_BY_CLIENT = {
+  obama:       [{ value: 'ventas',      label: 'Ventas' },      { value: 'customer',    label: 'Customer' }],
+  lv:          [{ value: 'ventas',      label: 'Ventas' },      { value: 'customer',    label: 'Customer' }],
+  claro_tyt:   [{ value: 'claro_tyt',   label: 'Claro TYT' }],
+  claro_wcb:   [{ value: 'claro_wcb',   label: 'Claro WCB' }],
+  claro_hogar: [{ value: 'claro_hogar', label: 'Claro Hogar' }],
+  claro_movil: [{ value: 'claro_movil', label: 'Claro Móvil' }],
+  claro_pymes: [{ value: 'claro_pymes', label: 'Claro PYMES' }],
+};
 
-function RequestCoordinatorModal({ onClose }) {
+function getCampaignOptions(clientCodes = []) {
+  const seen = new Set();
+  const options = [];
+  for (const code of clientCodes) {
+    for (const opt of (CAMPAIGNS_BY_CLIENT[code] || [])) {
+      if (!seen.has(opt.value)) {
+        seen.add(opt.value);
+        options.push(opt);
+      }
+    }
+  }
+  return options;
+}
+
+function RequestCoordinatorModal({ onClose, campaignOptions }) {
   const [form, setForm] = useState({ name: '', cedula: '', campaign: '' });
   const [error, setError] = useState('');
 
@@ -19,7 +38,7 @@ function RequestCoordinatorModal({ onClose }) {
     if (!form.cedula.trim()) { setError('La cédula es obligatoria'); return; }
     if (!form.campaign) { setError('Selecciona una campaña'); return; }
 
-    const campaignLabel = form.campaign === 'ventas' ? 'Ventas' : 'Customer';
+    const campaignLabel = campaignOptions.find((o) => o.value === form.campaign)?.label || form.campaign;
     const subject = 'Solicitud creación de coordinador — VoxPro';
     const body =
       `Buen día Hanny,\n\n` +
@@ -69,16 +88,14 @@ function RequestCoordinatorModal({ onClose }) {
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">Campaña</label>
-            <div className="flex gap-2">
-              {CAMPAIGN_OPTIONS.map((opt) => (
+            <div className="flex gap-2 flex-wrap">
+              {campaignOptions.map((opt) => (
                 <button
                   key={opt.value}
                   onClick={() => set('campaign', opt.value)}
                   className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
                     form.campaign === opt.value
-                      ? opt.value === 'ventas'
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-violet-600 text-white border-violet-600'
+                      ? 'bg-blue-600 text-white border-blue-600'
                       : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
@@ -136,11 +153,16 @@ function AgentBadge({ agent, onRemove }) {
 }
 
 const CAMPAIGN_STYLES = {
-  ventas:   { label: 'Ventas',   cls: 'bg-blue-50 text-blue-700 border-blue-200' },
-  customer: { label: 'Customer', cls: 'bg-violet-50 text-violet-700 border-violet-200' },
+  ventas:      { label: 'Ventas',      cls: 'bg-blue-50 text-blue-700 border-blue-200' },
+  customer:    { label: 'Customer',    cls: 'bg-violet-50 text-violet-700 border-violet-200' },
+  claro_tyt:   { label: 'Claro TYT',   cls: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
+  claro_wcb:   { label: 'Claro WCB',   cls: 'bg-sky-50 text-sky-700 border-sky-200' },
+  claro_hogar: { label: 'Claro Hogar', cls: 'bg-teal-50 text-teal-700 border-teal-200' },
+  claro_movil: { label: 'Claro Móvil', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  claro_pymes: { label: 'Claro PYMES', cls: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
 };
 
-function CoordinatorCard({ coord, onRemoveAgent, onAddAgents, onDeactivate, onCampaignChange, saving }) {
+function CoordinatorCard({ coord, onRemoveAgent, onAddAgents, onDeactivate, onCampaignChange, saving, campaignOptions }) {
   const [expanded, setExpanded] = useState(false);
   const activeCount = coord.agents.filter((a) => a.active_this_week).length;
   const isInactive = !coord.active;
@@ -235,15 +257,14 @@ function CoordinatorCard({ coord, onRemoveAgent, onAddAgents, onDeactivate, onCa
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-slate-400 font-medium">Campaña:</span>
                   <div className="flex gap-1.5">
-                    {[{ value: 'ventas', label: 'Ventas' }, { value: 'customer', label: 'Customer' }, { value: null, label: 'Ninguna' }].map((opt) => (
+                    {[...campaignOptions, { value: null, label: 'Ninguna' }].map((opt) => (
                       <button
                         key={String(opt.value)}
                         onClick={() => onCampaignChange(coord.id, opt.value)}
                         className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
                           coord.campaign === opt.value
-                            ? opt.value === 'ventas' ? 'bg-blue-600 text-white border-blue-600'
-                              : opt.value === 'customer' ? 'bg-violet-600 text-white border-violet-600'
-                              : 'bg-slate-600 text-white border-slate-600'
+                            ? opt.value === null ? 'bg-slate-600 text-white border-slate-600'
+                              : 'bg-blue-600 text-white border-blue-600'
                             : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
                         }`}
                       >
@@ -361,6 +382,7 @@ function AssignModal({ coordinator, unassigned, onConfirm, onClose }) {
 
 export default function HC() {
   const { user } = useAuth();
+  const campaignOptions = getCampaignOptions(user?.client_codes || []);
   const [weekStart, setWeekStart] = useState(getMonday());
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -559,6 +581,7 @@ export default function HC() {
                 onDeactivate={handleDeactivate}
                 onCampaignChange={handleCampaignChange}
                 saving={saving === coord.id}
+                campaignOptions={campaignOptions}
               />
             ))}
           </div>
@@ -597,7 +620,7 @@ export default function HC() {
 
       {/* Modal solicitud nuevo coordinador */}
       {showRequestModal && (
-        <RequestCoordinatorModal onClose={() => setShowRequestModal(false)} />
+        <RequestCoordinatorModal onClose={() => setShowRequestModal(false)} campaignOptions={campaignOptions} />
       )}
 
       {/* Modal de asignación */}
