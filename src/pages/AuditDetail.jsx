@@ -205,11 +205,14 @@ export default function AuditDetail() {
             <p className="text-xs text-slate-500">Cliente</p>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="text-sm text-slate-800 font-medium">{CLIENT_LABELS[selection.client_code] || selection.client_code}</span>
-              {selection.campaign_type && (
-                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${selection.campaign_type === 'customer'
-                    ? 'bg-purple-50 text-purple-700'
-                    : 'bg-cyan-50 text-cyan-700'
-                  }`}>
+              {selection.campaign_type && CAMPAIGN_LABELS[selection.campaign_type] && (
+                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  selection.campaign_type === 'customer' ? 'bg-purple-50 text-purple-700' :
+                  selection.campaign_type === 'movil'    ? 'bg-emerald-50 text-emerald-700' :
+                  selection.campaign_type === 'pymes'    ? 'bg-indigo-50 text-indigo-700' :
+                  selection.campaign_type === 'hogar'    ? 'bg-teal-50 text-teal-700' :
+                  'bg-cyan-50 text-cyan-700'
+                }`}>
                   {CAMPAIGN_LABELS[selection.campaign_type]}
                 </span>
               )}

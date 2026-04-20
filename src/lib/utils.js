@@ -53,6 +53,9 @@ export const CLIENT_LABELS = {
 };
 
 export const CAMPAIGN_LABELS = {
-  ventas: 'Ventas',
+  ventas:   'Ventas',
   customer: 'Customer',
+  hogar:    'Hogar',
+  movil:    'Móvil',
+  pymes:    'PYMES',
 };
