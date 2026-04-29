@@ -228,6 +228,37 @@ export default function AuditDetail() {
           <HangupInfo hangupBy={selection.hangup_by} />
         </div>
 
+        {/* Digitación del agente */}
+        {selection.digitacion_nomenclatura && (
+          <div className="mt-4 pt-4 border-t border-slate-100">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Digitación del agente (Aware)</p>
+            <div className="flex flex-wrap gap-3 items-start">
+              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+                selection.digitacion_nomenclatura === 'UP'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : selection.digitacion_nomenclatura === 'VLL'
+                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                  : ['UN', 'ABN', 'FER'].includes(selection.digitacion_nomenclatura)
+                  ? 'bg-red-50 text-red-700 border border-red-200'
+                  : 'bg-slate-100 text-slate-600 border border-slate-200'
+              }`}>
+                {selection.digitacion_nomenclatura}
+                {selection.digitacion_nombre ? ` — ${selection.digitacion_nombre}` : ''}
+              </span>
+              {selection.digitacion_motivo_rechazo && (
+                <span className="text-xs text-slate-500">
+                  Motivo: <span className="text-slate-700 font-medium">{selection.digitacion_motivo_rechazo}</span>
+                </span>
+              )}
+              {selection.digitacion_obs && !selection.digitacion_obs.match(/^\d+,/) && (
+                <span className="text-xs text-slate-500">
+                  Obs: <span className="text-slate-700 font-medium italic">"{selection.digitacion_obs}"</span>
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Audio Player */}
         <div className="mt-4 pt-4 border-t border-slate-100">
           {!audioUrl ? (
