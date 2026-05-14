@@ -522,6 +522,7 @@ function AnalysisResults({ analysis, selectionId, onScoreUpdate, onSeek }) {
   const [general, setGeneral] = useState(criteria?.general || []);
   const [highImpact, setHighImpact] = useState(criteria?.highImpact || []);
   const [editingGeneral, setEditingGeneral] = useState(false);
+  const [editingHighImpact, setEditingHighImpact] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [savingOverride, setSavingOverride] = useState(false);
   const [savedOverride, setSavedOverride] = useState(false);
@@ -614,34 +615,52 @@ function AnalysisResults({ analysis, selectionId, onScoreUpdate, onSeek }) {
       {/* High Impact Items */}
       {highImpact.length > 0 && (
         <div>
-          <h4 className="text-sm font-semibold text-slate-800 mb-2">Items de Alto Impacto</h4>
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-sm font-semibold text-slate-800">Items de Alto Impacto</h4>
+            <button
+              onClick={() => setEditingHighImpact(!editingHighImpact)}
+              className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors ${editingHighImpact
+                ? 'bg-blue-100 text-blue-700'
+                : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+              </svg>
+              {editingHighImpact ? 'Editando' : 'Editar'}
+            </button>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {highImpact.map((item, idx) => (
               <div
                 key={item.key}
-                className={`flex items-start gap-2 rounded-lg px-3 py-2 text-sm ${item.cumple ? 'bg-emerald-50' : 'bg-red-50'
-                  }`}
+                className={`flex items-start gap-2 rounded-lg px-3 py-2 text-sm ${item.cumple ? 'bg-emerald-50' : 'bg-red-50'}`}
               >
-                <button
-                  onClick={() => toggleHighImpact(idx)}
-                  className="mt-0.5 shrink-0 focus:outline-none"
-                  title="Clic para cambiar"
-                >
+                <div className="mt-0.5 shrink-0">
                   {item.cumple ? (
-                    <svg className="w-4 h-4 text-emerald-500 hover:text-emerald-700 transition-colors" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                    <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   ) : (
-                    <svg className="w-4 h-4 text-red-500 hover:text-red-700 transition-colors" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                    <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   )}
-                </button>
+                </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <span className={item.cumple ? 'text-emerald-800' : 'text-red-800 font-medium'}>
                       {item.label}
                     </span>
+                    {editingHighImpact && (
+                      <button onClick={() => toggleHighImpact(idx)} className="focus:outline-none">
+                        {item.cumple ? (
+                          <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 transition-colors cursor-pointer ring-1 ring-emerald-300">Cumple</span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 hover:bg-red-100 transition-colors cursor-pointer ring-1 ring-red-300">No cumple</span>
+                        )}
+                      </button>
+                    )}
                     <TimestampBtn seconds={item.timestamp} onSeek={onSeek} />
                   </div>
                   {item.observacion && (
