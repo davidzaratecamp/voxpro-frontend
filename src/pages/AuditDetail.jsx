@@ -527,10 +527,12 @@ function AnalysisResults({ analysis, selectionId, onScoreUpdate, onSeek }) {
   const [savingOverride, setSavingOverride] = useState(false);
   const [savedOverride, setSavedOverride] = useState(false);
   const [changes, setChanges] = useState(initialChanges || []);
+  const [savedScore, setSavedScore] = useState(originalScore);
+  const [savedHighImpactFailed, setSavedHighImpactFailed] = useState(criteria?.highImpactFailed || false);
 
   const { score, highImpactFailed } = dirty
     ? recalcScore(general, highImpact)
-    : { score: originalScore, highImpactFailed: criteria?.highImpactFailed || false };
+    : { score: savedScore, highImpactFailed: savedHighImpactFailed };
 
   const toggleHighImpact = (idx) => {
     setHighImpact((prev) => prev.map((item, i) => i === idx ? { ...item, cumple: !item.cumple } : item));
@@ -554,7 +556,11 @@ function AnalysisResults({ analysis, selectionId, onScoreUpdate, onSeek }) {
         score: newScore,
       });
       setSavedOverride(true);
+      setSavedScore(newScore);
+      setSavedHighImpactFailed(newFail);
       setDirty(false);
+      setEditingGeneral(false);
+      setEditingHighImpact(false);
       onScoreUpdate(newScore);
       // Recargar historial de cambios
       const res = await client.get(`/audit/selections/${selectionId}/analysis`);
