@@ -34,6 +34,9 @@ export default function AuditDetail() {
   const [reanalyzing, setReanalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState('');
 
+  // Manual qualification
+  const [showManualForm, setShowManualForm] = useState(false);
+
   // Audio player state
   const [audioUrl, setAudioUrl] = useState(null);
   const [audioLoading, setAudioLoading] = useState(false);
@@ -308,46 +311,52 @@ export default function AuditDetail() {
       {/* AI Analysis Section */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-5">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-slate-800">Análisis con IA</h3>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-          {(!analysis || !analysis.criteria) && !analysisLoading && (
-            <button
-              onClick={handleAnalyze}
-              disabled={analyzing}
-              className="inline-flex items-center gap-2 bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 transition-colors"
-            >
-              {analyzing ? (
-                <>
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Analizando...
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
-                  </svg>
-                  Auditar
-                </>
-              )}
-            </button>
-          )}
+          <h3 className="text-lg font-semibold text-slate-800">
+            {showManualForm ? 'Calificación Manual' : 'Análisis con IA'}
+          </h3>
+          <div className="flex items-center gap-2">
+            {/* Botón calificar manualmente — siempre visible (excepto durante análisis IA) */}
+            {!analyzing && !reanalyzing && (
+              <button
+                onClick={() => { setShowManualForm((v) => !v); setAnalyzeError(''); }}
+                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                  showManualForm
+                    ? 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 focus:ring-amber-400'
+                    : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400 focus:ring-slate-400'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
+                </svg>
+                {showManualForm ? 'Cancelar calificación' : 'Calificar Manualmente'}
+              </button>
+            )}
+            {/* Botón auditar con IA — solo cuando no hay análisis y no se muestra el form manual */}
+            {(!analysis || !analysis.criteria) && !analysisLoading && !showManualForm && (
+              <button
+                onClick={handleAnalyze}
+                disabled={analyzing}
+                className="inline-flex items-center gap-2 bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 transition-colors"
+              >
+                {analyzing ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Analizando...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
+                    </svg>
+                    Auditar
+                  </>
+                )}
+              </button>
+            )}
+          </div>
         </div>
 
         {analyzeError && (
@@ -359,31 +368,50 @@ export default function AuditDetail() {
           </div>
         )}
 
-        {(analyzing || reanalyzing) && (
-          <div className="flex flex-col items-center py-8 text-slate-500 gap-3">
-            <svg className="animate-spin h-8 w-8 text-blue-600" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-            <p className="text-sm">{reanalyzing ? 'Borrando análisis anterior y re-auditando con Gemini...' : 'Descargando audio y analizando con Gemini...'}</p>
-            <p className="text-xs text-slate-400">Esto puede tomar 30-60 segundos</p>
-          </div>
+        {/* Formulario de calificación manual */}
+        {showManualForm && (
+          <ManualQualificationForm
+            selectionId={id}
+            onSaved={(newScore) => {
+              setScore(String(newScore));
+              setStatus('completed');
+              setShowManualForm(false);
+              fetchAnalysis();
+            }}
+            onCancel={() => setShowManualForm(false)}
+          />
         )}
 
-        {analysisLoading && !analyzing && (
-          <div className="flex justify-center py-6">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
-          </div>
-        )}
+        {/* Contenido de análisis IA (oculto cuando está abierto el form manual) */}
+        {!showManualForm && (
+          <>
+            {(analyzing || reanalyzing) && (
+              <div className="flex flex-col items-center py-8 text-slate-500 gap-3">
+                <svg className="animate-spin h-8 w-8 text-blue-600" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                <p className="text-sm">{reanalyzing ? 'Borrando análisis anterior y re-auditando con Gemini...' : 'Descargando audio y analizando con Gemini...'}</p>
+                <p className="text-xs text-slate-400">Esto puede tomar 30-60 segundos</p>
+              </div>
+            )}
 
-        {analysis && analysis.criteria && !analyzing && (
-          <AnalysisResults analysis={analysis} selectionId={id} onScoreUpdate={(s) => setScore(String(s))} onSeek={audioUrl ? seekAudio : null} />
-        )}
+            {analysisLoading && !analyzing && (
+              <div className="flex justify-center py-6">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+              </div>
+            )}
 
-        {(!analysis || !analysis.criteria) && !analysisLoading && !analyzing && (
-          <p className="text-sm text-slate-400 py-4 text-center">
-            No se ha realizado análisis con IA para esta auditoría.
-          </p>
+            {analysis && analysis.criteria && !analyzing && (
+              <AnalysisResults analysis={analysis} selectionId={id} onScoreUpdate={(s) => setScore(String(s))} onSeek={audioUrl ? seekAudio : null} />
+            )}
+
+            {(!analysis || !analysis.criteria) && !analysisLoading && !analyzing && (
+              <p className="text-sm text-slate-400 py-4 text-center">
+                No se ha realizado análisis con IA para esta auditoría.
+              </p>
+            )}
+          </>
         )}
       </div>
 
@@ -813,6 +841,299 @@ function AnalysisResults({ analysis, selectionId, onScoreUpdate, onSeek }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function ManualQualificationForm({ selectionId, onSaved, onCancel }) {
+  const [general, setGeneral] = useState([]);
+  const [highImpact, setHighImpact] = useState([]);
+  const [notes, setNotes] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+
+  useEffect(() => {
+    setLoading(true);
+    client
+      .get(`/audit/selections/${selectionId}/criteria-template`)
+      .then((res) => {
+        setGeneral(res.data.data.general);
+        setHighImpact(res.data.data.highImpact);
+      })
+      .catch(() => setLoadError('No se pudieron cargar los criterios de evaluación.'))
+      .finally(() => setLoading(false));
+  }, [selectionId]);
+
+  const { score, highImpactFailed } = recalcScore(general, highImpact);
+
+  const toggleHI = (idx) =>
+    setHighImpact((prev) => prev.map((item, i) => i === idx ? { ...item, cumple: !item.cumple } : item));
+
+  const setHIObs = (idx, value) =>
+    setHighImpact((prev) => prev.map((item, i) => i === idx ? { ...item, observacion: value } : item));
+
+  const setGeneralState = (idx, state) =>
+    setGeneral((prev) => prev.map((item, i) => {
+      if (i !== idx) return item;
+      return { ...item, cumple: state === 'cumple', na: state === 'na' };
+    }));
+
+  const setGeneralObs = (idx, value) =>
+    setGeneral((prev) => prev.map((item, i) => i === idx ? { ...item, observacion: value } : item));
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveError('');
+    const { score: finalScore, highImpactFailed: finalHIF } = recalcScore(general, highImpact);
+    try {
+      await client.post(`/audit/selections/${selectionId}/qualify-manual`, {
+        criteria: { general, highImpact, highImpactFailed: finalHIF },
+        notes,
+      });
+      onSaved(finalScore);
+    } catch (err) {
+      setSaveError(err.response?.data?.message || 'Error al guardar la calificación.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-3">
+        <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        {loadError}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Score banner */}
+      <div className={`rounded-lg p-4 ${
+        highImpactFailed ? 'bg-red-50 border border-red-200'
+        : score >= 80 ? 'bg-emerald-50 border border-emerald-200'
+        : score >= 60 ? 'bg-amber-50 border border-amber-200'
+        : 'bg-red-50 border border-red-200'
+      }`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Puntaje calculado</p>
+            <p className={`text-4xl font-bold mt-0.5 ${
+              highImpactFailed ? 'text-red-600'
+              : score >= 80 ? 'text-emerald-600'
+              : score >= 60 ? 'text-amber-600'
+              : 'text-red-600'
+            }`}>
+              {score}<span className="text-xl font-normal text-slate-400">/100</span>
+            </p>
+          </div>
+          {highImpactFailed && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              </svg>
+              Falla de alto impacto — Score 0
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Items de Alto Impacto */}
+      {highImpact.length > 0 && (
+        <div>
+          <h4 className="text-sm font-semibold text-slate-800 mb-1">Items de Alto Impacto</h4>
+          <p className="text-xs text-slate-400 mb-3">Si cualquiera no cumple, el puntaje final es 0.</p>
+          <div className="space-y-2">
+            {highImpact.map((item, idx) => (
+              <div
+                key={item.key}
+                className={`rounded-lg border p-3 transition-colors ${item.cumple ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50'}`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className={`text-sm font-medium flex-1 ${item.cumple ? 'text-emerald-800' : 'text-red-800'}`}>
+                    {item.label}
+                  </span>
+                  <div className="flex shrink-0">
+                    <button
+                      onClick={() => !item.cumple && toggleHI(idx)}
+                      className={`px-3 py-1 rounded-l-md text-xs font-medium border-y border-l transition-colors ${
+                        item.cumple
+                          ? 'bg-emerald-500 text-white border-emerald-500'
+                          : 'bg-white text-slate-600 border-slate-300 hover:bg-emerald-50 hover:border-emerald-300'
+                      }`}
+                    >
+                      Cumple
+                    </button>
+                    <button
+                      onClick={() => item.cumple && toggleHI(idx)}
+                      className={`px-3 py-1 rounded-r-md text-xs font-medium border-y border-r transition-colors ${
+                        !item.cumple
+                          ? 'bg-red-500 text-white border-red-500'
+                          : 'bg-white text-slate-600 border-slate-300 hover:bg-red-50 hover:border-red-300'
+                      }`}
+                    >
+                      No cumple
+                    </button>
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  value={item.observacion || ''}
+                  onChange={(e) => setHIObs(idx, e.target.value)}
+                  placeholder="Observación (opcional)..."
+                  className={`mt-2 w-full text-xs rounded px-2 py-1.5 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-400 border ${
+                    item.cumple ? 'border-emerald-200 bg-white' : 'border-red-200 bg-white'
+                  }`}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Criterios Generales */}
+      {general.length > 0 && (
+        <div>
+          <h4 className="text-sm font-semibold text-slate-800 mb-1">Criterios Generales</h4>
+          <p className="text-xs text-slate-400 mb-3">Marcar N/A excluye el ítem del cálculo del puntaje.</p>
+          <div className="overflow-x-auto rounded-lg border border-slate-200">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="text-left py-2.5 px-4 text-xs font-semibold text-slate-600">Criterio</th>
+                  <th className="text-center py-2.5 px-3 text-xs font-semibold text-slate-600 w-16">Peso</th>
+                  <th className="text-center py-2.5 px-3 text-xs font-semibold text-slate-600 w-52">Estado</th>
+                  <th className="text-left py-2.5 px-4 text-xs font-semibold text-slate-600">Observación</th>
+                </tr>
+              </thead>
+              <tbody>
+                {general.map((item, idx) => {
+                  const state = item.na ? 'na' : item.cumple ? 'cumple' : 'no_cumple';
+                  return (
+                    <tr key={item.key} className={`border-b border-slate-100 last:border-0 ${state === 'no_cumple' ? 'bg-red-50/40' : state === 'na' ? 'bg-slate-50/60' : ''}`}>
+                      <td className="py-3 px-4 text-slate-700 font-medium text-sm">{item.label}</td>
+                      <td className="py-3 px-3 text-center">
+                        <span className={`text-xs font-semibold ${state === 'na' ? 'text-slate-400' : 'text-slate-600'}`}>
+                          {item.weight}%
+                        </span>
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="flex justify-center gap-1">
+                          <button
+                            onClick={() => setGeneralState(idx, 'cumple')}
+                            className={`px-2.5 py-1 rounded text-xs font-medium border transition-colors ${
+                              state === 'cumple'
+                                ? 'bg-emerald-500 text-white border-emerald-500'
+                                : 'bg-white text-slate-500 border-slate-200 hover:bg-emerald-50 hover:border-emerald-300'
+                            }`}
+                          >
+                            Cumple
+                          </button>
+                          <button
+                            onClick={() => setGeneralState(idx, 'no_cumple')}
+                            className={`px-2.5 py-1 rounded text-xs font-medium border transition-colors ${
+                              state === 'no_cumple'
+                                ? 'bg-red-500 text-white border-red-500'
+                                : 'bg-white text-slate-500 border-slate-200 hover:bg-red-50 hover:border-red-300'
+                            }`}
+                          >
+                            No cumple
+                          </button>
+                          <button
+                            onClick={() => setGeneralState(idx, 'na')}
+                            className={`px-2.5 py-1 rounded text-xs font-medium border transition-colors ${
+                              state === 'na'
+                                ? 'bg-slate-400 text-white border-slate-400'
+                                : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-100 hover:border-slate-400'
+                            }`}
+                          >
+                            N/A
+                          </button>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <input
+                          type="text"
+                          value={item.observacion || ''}
+                          onChange={(e) => setGeneralObs(idx, e.target.value)}
+                          placeholder="Observación..."
+                          className="w-full text-xs border border-slate-200 rounded px-2.5 py-1.5 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white"
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Resumen general */}
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1.5">Observaciones generales</label>
+        <textarea
+          rows={3}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Resumen de la evaluación de la llamada..."
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+        />
+      </div>
+
+      {saveError && (
+        <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2.5">
+          <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          {saveError}
+        </div>
+      )}
+
+      {/* Acciones */}
+      <div className="flex items-center gap-3 pt-1">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="inline-flex items-center gap-2 bg-amber-500 text-white rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 disabled:opacity-50 transition-colors"
+        >
+          {saving ? (
+            <>
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Guardando...
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+              </svg>
+              Guardar calificación manual
+            </>
+          )}
+        </button>
+        <button
+          onClick={onCancel}
+          className="text-sm text-slate-600 hover:text-slate-800 bg-white border border-slate-200 rounded-lg px-5 py-2.5 transition-colors"
+        >
+          Cancelar
+        </button>
+      </div>
     </div>
   );
 }
