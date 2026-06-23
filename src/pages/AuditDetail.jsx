@@ -394,7 +394,7 @@ export default function AuditDetail() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
-                <p className="text-sm">{reanalyzing ? 'Borrando análisis anterior y re-auditando con Gemini...' : 'Descargando audio y analizando con Gemini...'}</p>
+                <p className="text-sm">{reanalyzing ? `Borrando análisis anterior y re-auditando con ${brand?.aiEngine ?? 'Gemini'}...` : `Descargando audio y analizando con ${brand?.aiEngine ?? 'Gemini'}...`}</p>
                 <p className="text-xs text-slate-400">Esto puede tomar 30-60 segundos</p>
               </div>
             )}

@@ -6,6 +6,7 @@ const VIEWER_ZOOM_USERNAMES = new Set(['obamazoom']);
 const VIEWER_ZOOM_BRAND = {
   appName: 'Monitor',
   serverLabel: 'Otro Server',
+  aiEngine: 'Qualio',
 };
 
 export function isViewerZoom(role) {
