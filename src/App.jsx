@@ -49,7 +49,7 @@ export default function App() {
             <Route
               path="/configuracion"
               element={
-                <AdminRoute role="supervisor_calidad">
+                <AdminRoute role={['supervisor_calidad', 'viewer_zoom']}>
                   <Configuracion />
                 </AdminRoute>
               }

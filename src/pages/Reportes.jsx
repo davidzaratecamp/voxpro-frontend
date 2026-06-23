@@ -21,6 +21,7 @@ import jsPDF from 'jspdf';
 import client from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { CLIENT_LABELS } from '../lib/utils';
+import { useBrand } from '../lib/brand';
 
 ChartJS.register(
   CategoryScale,
@@ -302,6 +303,8 @@ function ArrowDown() {
 
 export default function Reportes() {
   const { user } = useAuth();
+  const brand = useBrand();
+  const appName = brand?.appName ?? 'VoxPro';
 
   // Filter state
   const [period, setPeriod] = useState('4w');
@@ -380,7 +383,7 @@ export default function Reportes() {
       const { kpis: k, ranking: agents, failingCriteria: f, statusDist: s } = res.data.data;
 
       const wb = new ExcelJS.Workbook();
-      wb.creator = 'VoxPro';
+      wb.creator = appName;
       wb.created = new Date();
 
       // ── Shared style helpers ─────────────────────────────────────────────────
@@ -464,7 +467,7 @@ export default function Reportes() {
         { width: 14 },
       ];
 
-      applyTitle(ws1, 'VoxPro — Reporte de Calidad', 'C', 1);
+      applyTitle(ws1, `${appName} — Reporte de Calidad`, 'C', 1);
       applySubtitle(ws1, `Período: ${periodLabel}   ·   Exportado: ${today}`, 'C', 2);
       ws1.addRow([]); // row 3 spacer
 
@@ -523,7 +526,7 @@ export default function Reportes() {
         { width: 14 },  // Estado
       ];
 
-      applyTitle(ws2, 'VoxPro — Ranking de Agentes', 'I', 1);
+      applyTitle(ws2, `${appName} — Ranking de Agentes`, 'I', 1);
       applySubtitle(ws2, `Período: ${periodLabel}   ·   Exportado: ${today}`, 'I', 2);
       ws2.addRow([]);
 
@@ -584,7 +587,7 @@ export default function Reportes() {
         { width: 13 },  // % del total
       ];
 
-      applyTitle(ws3, 'VoxPro — Criterios con más Fallas', 'D', 1);
+      applyTitle(ws3, `${appName} — Criterios con más Fallas`, 'D', 1);
       applySubtitle(ws3, `Período: ${periodLabel}   ·   Exportado: ${today}`, 'D', 2);
       ws3.addRow([]);
 
@@ -631,7 +634,7 @@ export default function Reportes() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `VoxPro_Reportes_${period}_${today}.xlsx`;
+      a.download = `${appName}_Reportes_${period}_${today}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -687,7 +690,7 @@ export default function Reportes() {
       }
 
       const today = new Date().toISOString().slice(0, 10);
-      pdf.save(`VoxPro_Reportes_${period}_${today}.pdf`);
+      pdf.save(`${appName}_Reportes_${period}_${today}.pdf`);
     } catch (err) {
       alert('Error al exportar PDF: ' + err.message);
     } finally {

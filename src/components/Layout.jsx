@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useBrand } from '../lib/brand';
 import { useNavigate, useLocation, Outlet, Link } from 'react-router-dom';
 import { CLIENT_LABELS } from '../lib/utils';
 
 export default function Layout() {
   const { user, logout } = useAuth();
+  const brand = useBrand();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -14,14 +16,14 @@ export default function Layout() {
     navigate('/login', { replace: true });
   };
 
-  const clientLabel = user?.client_codes
-    ?.map((c) => CLIENT_LABELS[c] || c)
-    .join(', ');
+  const clientLabel = brand
+    ? null
+    : user?.client_codes?.map((c) => CLIENT_LABELS[c] || c).join(', ');
 
   const pathname = location.pathname;
 
   // Nav items
-  const AUDITOR_ROLES = ['coordinator', 'formador', 'auditor_obama', 'auditor_claro', 'auditor_lv', 'auditor_reclutamiento', 'coordinator_obama', 'supervisor_calidad', 'coordinador_avaya'];
+  const AUDITOR_ROLES = ['coordinator', 'formador', 'auditor_obama', 'auditor_claro', 'auditor_lv', 'auditor_reclutamiento', 'coordinator_obama', 'supervisor_calidad', 'viewer_zoom', 'coordinador_avaya'];
   const isAuditor = AUDITOR_ROLES.includes(user?.role);
 
   const isAvaya = user?.role === 'coordinador_avaya';
@@ -131,14 +133,14 @@ export default function Layout() {
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="flex items-center gap-3 h-14 px-4 shrink-0">
-        <svg className="w-7 h-7 text-blue-600 shrink-0" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg className={`w-7 h-7 shrink-0 ${brand ? 'text-indigo-600' : 'text-blue-600'}`} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
           <rect x="10" y="28" width="6" height="24" rx="3" fill="currentColor" opacity="0.6" />
           <rect x="22" y="20" width="6" height="40" rx="3" fill="currentColor" opacity="0.8" />
           <rect x="34" y="12" width="6" height="56" rx="3" fill="currentColor" />
           <rect x="46" y="22" width="6" height="36" rx="3" fill="currentColor" opacity="0.8" />
           <rect x="58" y="30" width="6" height="20" rx="3" fill="currentColor" opacity="0.6" />
         </svg>
-        <span className="text-lg font-bold text-slate-800">VoxPro</span>
+        <span className="text-lg font-bold text-slate-800">{brand ? brand.appName : 'VoxPro'}</span>
       </div>
 
       {/* Navigation */}
@@ -150,7 +152,7 @@ export default function Layout() {
             onClick={() => setSidebarOpen(false)}
             className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
               item.active
-                ? 'bg-blue-50 text-blue-600'
+                ? (brand ? 'bg-indigo-50 text-indigo-600' : 'bg-blue-50 text-blue-600')
                 : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800'
             }`}
           >
@@ -176,14 +178,15 @@ export default function Layout() {
           <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
             {clientLabel}
           </span>
+
         )}
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white text-sm font-semibold shrink-0">
+          <div className={`flex items-center justify-center w-8 h-8 rounded-full text-white text-sm font-semibold shrink-0 ${brand ? 'bg-indigo-600' : 'bg-blue-600'}`}>
             {userInitial}
           </div>
           <div className="min-w-0">
             <span className="text-sm font-medium text-slate-700 truncate block">{user?.name}</span>
-            <span className="text-xs text-slate-400 truncate block">{user?.role}</span>
+            {!brand && <span className="text-xs text-slate-400 truncate block">{user?.role}</span>}
           </div>
         </div>
         <button

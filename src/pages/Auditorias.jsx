@@ -5,8 +5,9 @@ import client from '../api/client';
 import StatusBadge from '../components/StatusBadge';
 import AuditTable from '../components/AuditTable';
 import { formatDuration, formatDate, getMonday, CLIENT_LABELS, CAMPAIGN_LABELS } from '../lib/utils';
+import { useBrand } from '../lib/brand';
 
-function PhoneSearch({ navigate, user }) {
+function PhoneSearch({ navigate, user, serverLabel }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [searchDate, setSearchDate] = useState(''); // empty = all history + today via Kraken
@@ -57,7 +58,7 @@ function PhoneSearch({ navigate, user }) {
                 onClick={() => { setSourceTab('aware'); setResults(null); }}
                 className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${sourceTab === 'aware' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
               >
-                Aware
+                {serverLabel}
               </button>
               <button
                 onClick={() => { setSourceTab('zoom'); setResults(null); }}
@@ -136,7 +137,7 @@ function PhoneSearch({ navigate, user }) {
                               {rec.source_type === 'zoom' ? (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 border border-blue-200">Zoom</span>
                               ) : (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">Aware</span>
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">{serverLabel}</span>
                               )}
                             </td>
                           )}
@@ -190,6 +191,8 @@ const STATUS_OPTIONS = [
 
 export default function Auditorias() {
   const { user } = useAuth();
+  const brand = useBrand();
+  const serverLabel = brand?.serverLabel ?? 'Aware';
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -574,7 +577,7 @@ export default function Auditorias() {
       </div>
 
       {/* Global phone search */}
-      <PhoneSearch navigate={navigate} user={user} />
+      <PhoneSearch navigate={navigate} user={user} serverLabel={serverLabel} />
 
       {/* Realtime agents panel — shown when filtering by today */}
       {dateFilter === today && (

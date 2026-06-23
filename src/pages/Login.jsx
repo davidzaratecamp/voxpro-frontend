@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getLoginBrand } from '../lib/brand';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -9,6 +10,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const brand = getLoginBrand(username);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,7 +29,7 @@ export default function Login() {
   return (
     <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
       {/* Panel Izquierdo — Branding */}
-      <div className="hidden lg:flex relative overflow-hidden bg-gradient-to-br from-blue-600 to-blue-700 flex-col items-center justify-center px-12 text-white">
+      <div className={`hidden lg:flex relative overflow-hidden flex-col items-center justify-center px-12 text-white ${brand ? 'bg-gradient-to-br from-indigo-600 to-indigo-700' : 'bg-gradient-to-br from-blue-600 to-blue-700'}`}>
         {/* Patrón decorativo de dots */}
         <div className="absolute inset-0 opacity-10">
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -69,8 +71,8 @@ export default function Login() {
 
           {/* Título y subtítulo */}
           <div className="animate-fade-in-delay-1">
-            <h1 className="text-4xl font-bold tracking-tight">VoxPro</h1>
-            <p className="text-lg text-blue-200 mt-2">Sistema de auditoría de calidad</p>
+            <h1 className="text-4xl font-bold tracking-tight">{brand ? brand.appName : 'VoxPro'}</h1>
+            <p className={`text-lg mt-2 ${brand ? 'text-indigo-200' : 'text-blue-200'}`}>Sistema de auditoría de calidad</p>
           </div>
 
           {/* Mini-stats */}
@@ -101,14 +103,14 @@ export default function Login() {
       <div className="flex flex-col items-center justify-center bg-white px-6 py-12">
         {/* Mini-header branding para mobile */}
         <div className="lg:hidden flex items-center gap-3 mb-10 animate-fade-in">
-          <svg className="w-8 h-8 text-blue-600" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg className={`w-8 h-8 ${brand ? 'text-indigo-600' : 'text-blue-600'}`} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect x="10" y="28" width="6" height="24" rx="3" fill="currentColor" opacity="0.6" />
             <rect x="22" y="20" width="6" height="40" rx="3" fill="currentColor" opacity="0.8" />
             <rect x="34" y="12" width="6" height="56" rx="3" fill="currentColor" />
             <rect x="46" y="22" width="6" height="36" rx="3" fill="currentColor" opacity="0.8" />
             <rect x="58" y="30" width="6" height="20" rx="3" fill="currentColor" opacity="0.6" />
           </svg>
-          <span className="text-xl font-bold text-slate-800">VoxPro</span>
+          <span className="text-xl font-bold text-slate-800">{brand ? brand.appName : 'VoxPro'}</span>
         </div>
 
         <div className="w-full max-w-sm animate-slide-up">
@@ -180,7 +182,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg px-4 py-2.5 text-sm font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-200"
+              className={`w-full text-white rounded-lg px-4 py-2.5 text-sm font-semibold shadow-md hover:shadow-lg hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-200 ${brand ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 focus:ring-indigo-500' : 'bg-gradient-to-r from-blue-600 to-blue-700 focus:ring-blue-500'}`}
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -197,7 +199,7 @@ export default function Login() {
           </form>
 
           {/* Footer */}
-          <p className="text-center text-xs text-slate-400 mt-8">VoxPro v1.0</p>
+          {!brand && <p className="text-center text-xs text-slate-400 mt-8">VoxPro v1.0</p>}
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import { CLIENT_LABELS } from '../lib/utils';
+import { useBrand } from '../lib/brand';
 
 function formatTime(seconds) {
   if (!seconds) return '—';
@@ -126,6 +127,8 @@ function AgentRow({ agentId, agentName, calls, search }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function RealtimeMonitor() {
+  const brand = useBrand();
+  const serverLabel = brand?.serverLabel ?? 'Aware';
   const today = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(today);
   const [calls, setCalls] = useState(null);
@@ -183,7 +186,7 @@ export default function RealtimeMonitor() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-800">Monitor en tiempo real</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Llamadas del día en Aware</p>
+          <p className="text-sm text-slate-500 mt-0.5">Llamadas del día en {serverLabel}</p>
         </div>
         <div className="flex items-center gap-3">
           <input

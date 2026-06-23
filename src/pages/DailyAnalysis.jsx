@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import client from '../api/client';
+import { useBrand } from '../lib/brand';
 
 function formatDuration(seconds) {
   if (!seconds) return '—';
@@ -28,6 +29,8 @@ function ContactabilityBar({ rate }) {
 }
 
 export default function DailyAnalysis() {
+  const brand = useBrand();
+  const serverLabel = brand?.serverLabel ?? 'Aware';
   const today = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(today);
   const [metrics, setMetrics] = useState(null);
@@ -151,10 +154,10 @@ export default function DailyAnalysis() {
                             <div className="font-medium text-slate-800 truncate max-w-[160px]">{a.agent_name || a.agent_id}</div>
                             <div className="text-xs text-slate-400">
                               {a.zoom_calls > 0 && a.total_calls > 0
-                                ? `${a.zoom_calls} Zoom + ${a.total_calls} Aware`
+                                ? `${a.zoom_calls} Zoom + ${a.total_calls} ${serverLabel}`
                                 : a.zoom_calls > 0
                                 ? `${a.zoom_calls} Zoom`
-                                : `${a.total_calls} Aware`}
+                                : `${a.total_calls} ${serverLabel}`}
                             </div>
                           </td>
                           <td className="px-4 py-2.5 text-center text-slate-600">{a.total_calls + a.zoom_calls}</td>

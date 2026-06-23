@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useBrand } from '../lib/brand';
 import StatusBadge from '../components/StatusBadge';
 import { formatDuration, formatDate, formatFileSize, CLIENT_LABELS, CAMPAIGN_LABELS } from '../lib/utils';
 
@@ -17,7 +18,9 @@ export default function AuditDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const isSupervisor = user?.role === 'supervisor_calidad';
+  const brand = useBrand();
+  const serverLabel = brand?.serverLabel ?? 'Aware';
+  const isSupervisor = user?.role === 'supervisor_calidad' || user?.role === 'viewer_zoom';
   const [selection, setSelection] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -230,7 +233,7 @@ export default function AuditDetail() {
           <Info label="Tamaño" value={formatFileSize(selection.file_size)} />
           <Info label="Fecha" value={formatDate(selection.file_date)} />
           <Info label="Archivo" value={selection.file_name} />
-          <Info label="ID Llamada (Aware)" value={selection.call_id || '—'} />
+          <Info label={`ID Llamada (${serverLabel})`} value={selection.call_id || '—'} />
           <Info label="Extensión" value={selection.agent_extension || '—'} />
           <HangupInfo hangupBy={selection.hangup_by} />
         </div>
@@ -238,7 +241,7 @@ export default function AuditDetail() {
         {/* Digitación del agente */}
         {selection.digitacion_nomenclatura && (
           <div className="mt-4 pt-4 border-t border-slate-100">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Digitación del agente (Aware)</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Digitación del agente ({serverLabel})</p>
             <div className="flex flex-wrap gap-3 items-start">
               <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
                 selection.digitacion_nomenclatura === 'UP'

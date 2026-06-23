@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import { formatDuration, formatDate } from '../lib/utils';
+import { useBrand } from '../lib/brand';
 
-function SourceBadge({ sourceType }) {
+function SourceBadge({ sourceType, serverLabel }) {
   if (sourceType === 'zoom') {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 border border-blue-200">
@@ -19,12 +20,12 @@ function SourceBadge({ sourceType }) {
       <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
       </svg>
-      Aware
+      {serverLabel ?? 'Aware'}
     </span>
   );
 }
 
-function RecordingRow({ rec, index, onAudit, selectingId, navigate }) {
+function RecordingRow({ rec, index, onAudit, selectingId, navigate, serverLabel }) {
   const completed = rec.selection_status === 'completed';
   const inProgress = rec.selection_id && !completed;
   const key = rec._realtime_call ? rec._realtime_call.registro_llamada_id : rec.id;
@@ -36,7 +37,7 @@ function RecordingRow({ rec, index, onAudit, selectingId, navigate }) {
       <td className="px-4 py-2.5 text-slate-600 text-xs">{rec.call_phone || '—'}</td>
       {rec.source_type !== undefined && (
         <td className="px-4 py-2.5 flex items-center gap-1.5">
-          <SourceBadge sourceType={rec.source_type} />
+          <SourceBadge sourceType={rec.source_type} serverLabel={serverLabel} />
           {rec._from_search && (
             <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-600 border border-amber-200">búsqueda</span>
           )}
@@ -66,7 +67,7 @@ function RecordingRow({ rec, index, onAudit, selectingId, navigate }) {
   );
 }
 
-function RecordingsTable({ title, recordings, color, onAudit, selectingId, navigate, phoneFilter }) {
+function RecordingsTable({ title, recordings, color, onAudit, selectingId, navigate, phoneFilter, serverLabel }) {
   const filtered = phoneFilter.trim()
     ? recordings.filter((r) => (r.call_phone || '').includes(phoneFilter.trim()))
     : recordings;
@@ -122,6 +123,7 @@ function RecordingsTable({ title, recordings, color, onAudit, selectingId, navig
                     onAudit={onAudit}
                     selectingId={selectingId}
                     navigate={navigate}
+                    serverLabel={serverLabel}
                   />
                 ))
               )}
@@ -134,6 +136,8 @@ function RecordingsTable({ title, recordings, color, onAudit, selectingId, navig
 }
 
 export default function AgentRecordings() {
+  const brand = useBrand();
+  const serverLabel = brand?.serverLabel ?? 'Aware';
   const { agentId } = useParams();
   const [searchParams] = useSearchParams();
   const date = searchParams.get('date');
@@ -251,7 +255,7 @@ export default function AgentRecordings() {
               <p className="text-3xl font-bold text-slate-800">{allRecordings.length}</p>
               {isSplitMode ? (
                 <p className="text-xs text-slate-400 mt-1">
-                  {recordings.length} Aware · {zoomRecordings.length} Zoom
+                  {recordings.length} {serverLabel} · {zoomRecordings.length} Zoom
                 </p>
               ) : (
                 <p className="text-xs text-slate-400 mt-1">grabaciones del día</p>
@@ -285,7 +289,7 @@ export default function AgentRecordings() {
                   onClick={() => { setPhoneSourceTab('aware'); setPhoneResults(null); }}
                   className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${phoneSourceTab === 'aware' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                 >
-                  Aware
+                  {serverLabel}
                 </button>
                 <button
                   onClick={() => { setPhoneSourceTab('zoom'); setPhoneResults(null); }}
@@ -341,7 +345,7 @@ export default function AgentRecordings() {
                             <td className="py-2 pr-4 text-slate-400 text-xs w-6">{i + 1}</td>
                             <td className="py-2 pr-4 font-semibold text-slate-800">{formatDuration(rec.call_duration)}</td>
                             <td className="py-2 pr-4 text-slate-600">{rec.call_phone}</td>
-                            <td className="py-2 pr-4"><SourceBadge sourceType={rec.source_type} /></td>
+                            <td className="py-2 pr-4"><SourceBadge sourceType={rec.source_type} serverLabel={serverLabel} /></td>
                             <td className="py-2 w-px whitespace-nowrap">
                               {completed ? (
                                 <button onClick={() => navigate(`/audit/${rec.selection_id}`)} className="inline-flex items-center gap-1.5 bg-emerald-600 text-white rounded-lg px-4 py-1.5 text-xs font-medium hover:bg-emerald-700 transition-colors">Auditada</button>
@@ -398,13 +402,14 @@ export default function AgentRecordings() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <RecordingsTable
-                title="Grabaciones Aware"
+                title={`Grabaciones ${serverLabel}`}
                 recordings={recordings}
                 color="aware"
                 onAudit={handleAudit}
                 selectingId={selectingId}
                 navigate={navigate}
                 phoneFilter={phoneFilter}
+                serverLabel={serverLabel}
               />
               <RecordingsTable
                 title="Grabaciones Zoom"
@@ -414,6 +419,7 @@ export default function AgentRecordings() {
                 selectingId={selectingId}
                 navigate={navigate}
                 phoneFilter={phoneFilter}
+                serverLabel={serverLabel}
               />
             </div>
           </div>
@@ -466,6 +472,7 @@ export default function AgentRecordings() {
                           onAudit={handleAudit}
                           selectingId={selectingId}
                           navigate={navigate}
+                          serverLabel={serverLabel}
                         />
                       ))}
                     </tbody>
