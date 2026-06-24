@@ -1,7 +1,7 @@
 import { useAuth } from '../context/AuthContext';
 
 // Usernames conocidos del rol viewer_zoom — usados en Login antes de saber el rol
-const VIEWER_ZOOM_USERNAMES = new Set(['obamazoom']);
+const VIEWER_ZOOM_USERNAMES = new Set(['viewer_zoom']);
 
 const VIEWER_ZOOM_BRAND = {
   appName: 'Monitor',
