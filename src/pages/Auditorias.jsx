@@ -223,6 +223,9 @@ export default function Auditorias() {
   const [coordinatorFilter, setCoordinatorFilter] = useState('');
   const [coordinators, setCoordinators] = useState([]);
 
+  // Filtro "Solo OJT" (supervisor_calidad y gestor_usuarios)
+  const [onlyOjt, setOnlyOjt] = useState(searchParams.get('only_ojt') === '1');
+
   useEffect(() => {
     if (user?.role !== 'supervisor_calidad') return;
     client.get('/hc/coordinators')
@@ -236,20 +239,21 @@ export default function Auditorias() {
   const [realtimeLoading, setRealtimeLoading] = useState(false);
 
   // Load agents by date from the backend (shared across all PCs)
-  const fetchWeekAgents = useCallback(async (week, clientCode = null, subcampaign = null, coordId = null) => {
+  const fetchWeekAgents = useCallback(async (week, clientCode = null, subcampaign = null, coordId = null, ojtOnly = false) => {
     try {
       const params = { week_start: week };
       if (clientCode) params.client = clientCode;
       if (subcampaign) params.subcampaign = subcampaign;
       if (coordId) params.coordinator_id = coordId;
+      if (ojtOnly) params.only_ojt = 'true';
       const res = await client.get('/scan/week-agents', { params });
       setScannedByDate(res.data.data || {});
     } catch { /* ignore */ }
   }, []);
 
   useEffect(() => {
-    fetchWeekAgents(weekStart, clientFilter || null, campaignFilter || null, coordinatorFilter || null);
-  }, [weekStart, clientFilter, campaignFilter, coordinatorFilter, fetchWeekAgents]);
+    fetchWeekAgents(weekStart, clientFilter || null, campaignFilter || null, coordinatorFilter || null, onlyOjt);
+  }, [weekStart, clientFilter, campaignFilter, coordinatorFilter, onlyOjt, fetchWeekAgents]);
 
   // Load realtime agents when user filters by today
   useEffect(() => {
@@ -272,8 +276,9 @@ export default function Auditorias() {
     if (dateFilter) params.date = dateFilter;
     if (campaignFilter) params.campaign = campaignFilter;
     if (search) params.search = search;
+    if (onlyOjt) params.only_ojt = '1';
     setSearchParams(params, { replace: true });
-  }, [weekStart, statusFilter, clientFilter, dateFilter, campaignFilter, search, setSearchParams]);
+  }, [weekStart, statusFilter, clientFilter, dateFilter, campaignFilter, search, onlyOjt, setSearchParams]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -283,6 +288,7 @@ export default function Auditorias() {
       if (clientFilter) params.client = clientFilter;
       if (dateFilter) params.date = dateFilter;
       if (campaignFilter) params.campaign = campaignFilter;
+      if (onlyOjt) params.only_ojt = 'true';
 
       const res = await client.get('/audit/selections', { params });
       setSelections(res.data.data);
@@ -291,7 +297,7 @@ export default function Auditorias() {
     } finally {
       setLoading(false);
     }
-  }, [weekStart, statusFilter, clientFilter, dateFilter, campaignFilter]);
+  }, [weekStart, statusFilter, clientFilter, dateFilter, campaignFilter, onlyOjt]);
 
   useEffect(() => {
     fetchData();
@@ -450,6 +456,18 @@ export default function Auditorias() {
               ))}
               <option value="__unassigned__">Sin coordinador</option>
             </select>
+          )}
+
+          {(user?.role === 'supervisor_calidad' || user?.role === 'gestor_usuarios') && (
+            <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={onlyOjt}
+                onChange={(e) => setOnlyOjt(e.target.checked)}
+                className="rounded border-slate-300 text-blue-600 focus:ring-blue-400"
+              />
+              Solo OJT
+            </label>
           )}
 
           {clientFilter === 'claro_wcb' ? (
