@@ -7,6 +7,7 @@ const ROLES = [
   { value: 'coordinador_avaya',  label: 'Coordinador Avaya' },
   { value: 'supervisor_calidad', label: 'Supervisor Calidad' },
   { value: 'gestor_usuarios',    label: 'Gestor Usuarios' },
+  { value: 'auditor_ia',         label: 'Auditor IA' },
 ];
 
 const CLIENT_CODES = [
@@ -24,6 +25,7 @@ const ROLE_COLORS = {
   coordinador_avaya:  'bg-violet-100 text-violet-700',
   supervisor_calidad: 'bg-indigo-100 text-indigo-700',
   gestor_usuarios:    'bg-pink-100 text-pink-700',
+  auditor_ia:         'bg-cyan-100 text-cyan-700',
 };
 
 const EMPTY_FORM = {

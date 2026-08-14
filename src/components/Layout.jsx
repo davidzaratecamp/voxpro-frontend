@@ -92,6 +92,16 @@ export default function Layout() {
         </svg>
       ),
     }] : []),
+    ...(user?.role === 'auditor_ia' ? [{
+      label: 'Auditoría IA',
+      to: '/ia/auditorias',
+      active: pathname === '/ia/auditorias',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21M6.75 6.75h10.5v10.5H6.75V6.75z" />
+        </svg>
+      ),
+    }] : []),
     ...(user?.role === 'supervisor_calidad' ? [{
       label: 'Head Count',
       to: '/hc',
@@ -172,6 +182,11 @@ export default function Layout() {
         {user?.role === 'coordinador_avaya' && (
           <span className="inline-flex items-center rounded-full bg-violet-50 px-2.5 py-0.5 text-xs font-medium text-violet-700">
             Coordinador Avaya
+          </span>
+        )}
+        {user?.role === 'auditor_ia' && (
+          <span className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
+            Auditor IA
           </span>
         )}
         {clientLabel && user?.role !== 'formador' && (

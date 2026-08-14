@@ -1,10 +1,11 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import IAAuditorias from './pages/IAAuditorias';
 import AuditDetail from './pages/AuditDetail';
 import Auditorias from './pages/Auditorias';
 import Agentes from './pages/Agentes';
@@ -20,6 +21,12 @@ import RealtimeMonitor from './pages/RealtimeMonitor';
 import HC from './pages/HC';
 import DailyAnalysis from './pages/DailyAnalysis';
 
+function Home() {
+  const { user } = useAuth();
+  if (user?.role === 'auditor_ia') return <Navigate to="/ia/auditorias" replace />;
+  return <Dashboard />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -33,7 +40,7 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<Home />} />
             <Route path="/auditorias" element={<Auditorias />} />
             <Route path="/agentes" element={<Agentes />} />
             <Route path="/agentes/:agentId" element={<AgentDetail />} />
@@ -41,6 +48,7 @@ export default function App() {
             <Route path="/audit/:id" element={<AuditDetail />} />
             <Route path="/agent-recordings/:agentId" element={<AgentRecordings />} />
             <Route path="/ojt/agentes" element={<OJTAgentes />} />
+            <Route path="/ia/auditorias" element={<IAAuditorias />} />
             <Route path="/avaya/agentes" element={<AvayaAgentes />} />
             <Route path="/avaya/auditorias" element={<AvayaAuditorias />} />
             <Route path="/realtime" element={<RealtimeMonitor />} />
