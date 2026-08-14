@@ -288,12 +288,14 @@ function GraduateModal({ agent, onClose, onConfirm }) {
 export default function OJTAgentes() {
   const { user } = useAuth();
   const allowedClientCodes = user?.client_codes || [];
+  const canManage = user?.role !== 'supervisor_calidad';
   const [agents, setAgents]           = useState([]);
   const [awareSources, setAwareSources] = useState([]);
   const [loading, setLoading]         = useState(true);
   const [loadError, setLoadError]     = useState(null);
   const [tab, setTab]                 = useState('activos'); // 'activos' | 'historial'
   const [modal, setModal]             = useState(null);      // null | 'create' | agent obj (edit) | { graduate: agent }
+  const [clientFilter, setClientFilter] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -327,9 +329,11 @@ export default function OJTAgentes() {
 
   const activos    = agents.filter((a) => a.status === 'activo');
   const historial  = agents.filter((a) => a.status !== 'activo');
-  const displayed  = tab === 'activos' ? activos : historial;
+  const byClient   = (list) => clientFilter ? list.filter((a) => a.client_code === clientFilter) : list;
+  const displayed  = byClient(tab === 'activos' ? activos : historial);
 
   const clientLabel = (code) => CLIENT_CODES.find((c) => c.value === code)?.label || code;
+  const clientOptions = allowedClientCodes.map((code) => ({ value: code, label: clientLabel(code) }));
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -337,20 +341,22 @@ export default function OJTAgentes() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Mis Agentes OJT</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{canManage ? 'Mis Agentes OJT' : 'Agentes OJT'}</h1>
           <p className="text-sm text-slate-500 mt-1">
             {activos.length} agente{activos.length !== 1 ? 's' : ''} activo{activos.length !== 1 ? 's' : ''} en formación
           </p>
         </div>
-        <button
-          onClick={() => setModal('create')}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          Agregar agente
-        </button>
+        {canManage && (
+          <button
+            onClick={() => setModal('create')}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Agregar agente
+          </button>
+        )}
       </div>
 
       {loadError && (
@@ -359,24 +365,39 @@ export default function OJTAgentes() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit">
-        {[
-          { key: 'activos',   label: `En formación (${activos.length})` },
-          { key: 'historial', label: `Historial (${historial.length})` },
-        ].map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-              tab === t.key
-                ? 'bg-white text-slate-800 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
+      {/* Tabs + filtro de campaña */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit">
+          {[
+            { key: 'activos',   label: `En formación (${byClient(activos).length})` },
+            { key: 'historial', label: `Historial (${byClient(historial).length})` },
+          ].map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                tab === t.key
+                  ? 'bg-white text-slate-800 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {clientOptions.length > 1 && (
+          <select
+            value={clientFilter}
+            onChange={(e) => setClientFilter(e.target.value)}
+            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all"
           >
-            {t.label}
-          </button>
-        ))}
+            <option value="">Todas las campañas</option>
+            {clientOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Tabla */}
@@ -440,19 +461,25 @@ export default function OJTAgentes() {
                     )}
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-3">
-                        <button
-                          onClick={() => setModal(a)}
-                          className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                        >
-                          Editar
-                        </button>
-                        {a.status === 'activo' && (
-                          <button
-                            onClick={() => setModal({ graduate: a })}
-                            className="text-xs text-green-600 hover:text-green-700 font-medium"
-                          >
-                            Graduar
-                          </button>
+                        {canManage ? (
+                          <>
+                            <button
+                              onClick={() => setModal(a)}
+                              className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                            >
+                              Editar
+                            </button>
+                            {a.status === 'activo' && (
+                              <button
+                                onClick={() => setModal({ graduate: a })}
+                                className="text-xs text-green-600 hover:text-green-700 font-medium"
+                              >
+                                Graduar
+                              </button>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-xs text-slate-300">—</span>
                         )}
                       </div>
                     </td>

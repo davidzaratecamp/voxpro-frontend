@@ -82,8 +82,8 @@ export default function Layout() {
         </svg>
       ),
     }] : []),
-    ...(user?.role === 'formador' ? [{
-      label: 'Mis Agentes OJT',
+    ...(user?.role === 'formador' || user?.role === 'supervisor_calidad' ? [{
+      label: user?.role === 'formador' ? 'Mis Agentes OJT' : 'Agentes OJT',
       to: '/ojt/agentes',
       active: pathname === '/ojt/agentes',
       icon: (
