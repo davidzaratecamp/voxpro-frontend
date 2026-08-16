@@ -92,7 +92,7 @@ export default function Layout() {
         </svg>
       ),
     }] : []),
-    ...(user?.role === 'auditor_ia' ? [{
+    ...(user?.role === 'auditor_ia' || user?.role === 'gestor_usuarios' ? [{
       label: 'Auditoría IA',
       to: '/ia/auditorias',
       active: pathname === '/ia/auditorias',

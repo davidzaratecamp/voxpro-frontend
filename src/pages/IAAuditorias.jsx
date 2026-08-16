@@ -18,6 +18,13 @@ function hangupBadge(reason) {
   return HANGUP_LABELS[reason] || { label: reason || '—', cls: 'bg-slate-100 text-slate-500' };
 }
 
+function scoreBadge(score) {
+  if (score == null) return 'bg-slate-100 text-slate-500';
+  if (score >= 80) return 'bg-emerald-100 text-emerald-700';
+  if (score >= 60) return 'bg-amber-100 text-amber-700';
+  return 'bg-red-100 text-red-700';
+}
+
 function formatDuration(seconds) {
   if (seconds == null) return '—';
   const m = Math.floor(seconds / 60);
@@ -41,6 +48,7 @@ function CallDetailModal({ callId, onClose }) {
   const [audioUrl, setAudioUrl] = useState(null);
   const [audioLoading, setAudioLoading] = useState(false);
   const [audioError, setAudioError] = useState(null);
+  const [aiAudit, setAiAudit] = useState(undefined); // undefined = cargando, null = sin auditar
 
   useEffect(() => {
     setLoading(true);
@@ -49,6 +57,11 @@ function CallDetailModal({ callId, onClose }) {
       .then((res) => setCall(res.data.data))
       .catch(() => setError('No se pudo cargar el detalle de la llamada.'))
       .finally(() => setLoading(false));
+
+    setAiAudit(undefined);
+    voicebotApi.getCallAudit(callId)
+      .then((res) => setAiAudit(res.data.data))
+      .catch(() => setAiAudit(null));
 
     return () => { if (audioUrl) URL.revokeObjectURL(audioUrl); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -109,6 +122,30 @@ function CallDetailModal({ callId, onClose }) {
               )}
 
               <div>
+                <h3 className="text-sm font-semibold text-slate-800 mb-2">Auditoría de calidad IA</h3>
+                {aiAudit === undefined ? (
+                  <p className="text-xs text-slate-400">Cargando...</p>
+                ) : aiAudit === null ? (
+                  <p className="text-xs text-slate-400 bg-slate-50 rounded-lg p-3">
+                    Aún no auditada — puede ser anterior a la activación de la auditoría automática, estar en cola, o el switch está desactivado.
+                  </p>
+                ) : (
+                  <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-semibold ${scoreBadge(aiAudit.score)}`}>
+                      {aiAudit.score}/100
+                    </span>
+                    {aiAudit.summary && <p className="text-sm text-slate-700">{aiAudit.summary}</p>}
+                    {aiAudit.strengths && (
+                      <p className="text-xs text-emerald-700"><span className="font-semibold">Aciertos: </span>{aiAudit.strengths}</p>
+                    )}
+                    {aiAudit.issues && (
+                      <p className="text-xs text-red-600"><span className="font-semibold">Fallas: </span>{aiAudit.issues}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div>
                 <h3 className="text-sm font-semibold text-slate-800 mb-2">Audio</h3>
                 {!audioUrl ? (
                   <button
@@ -154,9 +191,183 @@ function CallDetailModal({ callId, onClose }) {
   );
 }
 
+// ─── Tab de configuración: prompts + switch de auditoría automática ──────────
+
+function PromptEditor({ proyectoId, label, initialText, onSaved }) {
+  const [text, setText] = useState(initialText || '');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleSave = async () => {
+    if (!text.trim()) {
+      setError('El prompt no puede estar vacío.');
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await voicebotApi.savePrompt(proyectoId, text.trim());
+      setSaved(true);
+      onSaved?.();
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      setError('No se pudo guardar el prompt.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+      <h3 className="text-sm font-semibold text-slate-800">{label}</h3>
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        rows={10}
+        placeholder="Pega aquí el prompt operativo que sigue el agente de IA de esta campaña..."
+        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono outline-none focus:ring-1 focus:ring-blue-400 resize-y"
+      />
+      <div className="flex items-center gap-3">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 transition-colors"
+        >
+          {saving ? 'Guardando...' : 'Guardar'}
+        </button>
+        {saved && <span className="text-xs text-emerald-600 font-medium">Guardado</span>}
+        {error && <span className="text-xs text-red-500">{error}</span>}
+      </div>
+    </div>
+  );
+}
+
+function ConfiguracionTab() {
+  const [prompts, setPrompts] = useState(null);
+  const [settings, setSettings] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [toggling, setToggling] = useState(false);
+  const [confirmEnable, setConfirmEnable] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [promptsRes, settingsRes] = await Promise.all([
+        voicebotApi.getPrompts(),
+        voicebotApi.getAuditSettings(),
+      ]);
+      setPrompts(promptsRes.data.data || {});
+      setSettings(settingsRes.data.data);
+    } catch {
+      setPrompts({});
+      setSettings({ enabled: false, enabled_at: null });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleEnable = async () => {
+    setToggling(true);
+    try {
+      const res = await voicebotApi.enableAutoAudit();
+      setSettings(res.data.data);
+      setConfirmEnable(false);
+    } finally {
+      setToggling(false);
+    }
+  };
+
+  const handleDisable = async () => {
+    setToggling(true);
+    try {
+      const res = await voicebotApi.disableAutoAudit();
+      setSettings(res.data.data);
+    } finally {
+      setToggling(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="text-sm text-slate-400 py-12 text-center">Cargando configuración...</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl border border-slate-200 p-5">
+        <h2 className="text-base font-semibold text-slate-800 mb-1">Auditoría automática con IA</h2>
+        <p className="text-sm text-slate-500 mb-4">
+          Cada llamada nueva de Claro TyT y Claro Hogar se calificará sola contra el prompt operativo de su campaña.
+          Las llamadas anteriores al momento de activación nunca se tocan.
+        </p>
+
+        {settings?.enabled ? (
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-sm font-medium">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              Activa desde {new Date(settings.enabled_at).toLocaleString('es-CO')}
+            </span>
+            <button
+              onClick={handleDisable}
+              disabled={toggling}
+              className="px-4 py-2 text-sm font-medium rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40 transition-colors"
+            >
+              {toggling ? 'Desactivando...' : 'Desactivar'}
+            </button>
+          </div>
+        ) : confirmEnable ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
+            <p className="text-sm text-amber-800">
+              Desde este momento, todas las llamadas nuevas de Claro TyT y Claro Hogar se calificarán solas. Las llamadas anteriores a este click no se tocan. ¿Confirmas?
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleEnable}
+                disabled={toggling}
+                className="px-4 py-2 text-sm font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 transition-colors"
+              >
+                {toggling ? 'Activando...' : 'Sí, activar ahora'}
+              </button>
+              <button
+                onClick={() => setConfirmEnable(false)}
+                className="px-4 py-2 text-sm font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmEnable(true)}
+            className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+          >
+            Activar auditoría automática
+          </button>
+        )}
+      </div>
+
+      <PromptEditor
+        proyectoId={13}
+        label="Prompt operativo — Claro TyT"
+        initialText={prompts?.[13]?.prompt_text}
+        onSaved={load}
+      />
+      <PromptEditor
+        proyectoId={12}
+        label="Prompt operativo — Claro Hogar"
+        initialText={prompts?.[12]?.prompt_text}
+        onSaved={load}
+      />
+    </div>
+  );
+}
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function IAAuditorias() {
+  const [tab, setTab] = useState('llamadas'); // 'llamadas' | 'configuracion'
   const initialDates = defaultDates();
   const [dateFrom, setDateFrom] = useState(initialDates.from);
   const [dateTo, setDateTo] = useState(initialDates.to);
@@ -197,6 +408,29 @@ export default function IAAuditorias() {
         </p>
       </div>
 
+      <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit">
+        {[
+          { key: 'llamadas',      label: 'Llamadas' },
+          { key: 'configuracion', label: 'Configuración' },
+        ].map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              tab === t.key
+                ? 'bg-white text-slate-800 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'configuracion' ? (
+        <ConfiguracionTab />
+      ) : (
+      <>
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
         <div className="flex flex-col sm:flex-row flex-wrap gap-3">
           <input
@@ -304,6 +538,8 @@ export default function IAAuditorias() {
 
       {selectedCallId && (
         <CallDetailModal callId={selectedCallId} onClose={() => setSelectedCallId(null)} />
+      )}
+      </>
       )}
     </div>
   );
