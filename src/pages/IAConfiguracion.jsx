@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 const PROYECTO_NAMES = { 12: 'Claro Hogar', 13: 'Claro TyT' };
 const CLIENT_CODE_TO_PROYECTO = { claro_hogar: 12, claro_tyt: 13 };
 
-function PromptEditor({ proyectoId, initialText, onSaved }) {
+function PromptEditor({ proyectoId, initialText, onSaved, readOnly }) {
   const [text, setText] = useState(initialText || '');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -37,28 +37,47 @@ function PromptEditor({ proyectoId, initialText, onSaved }) {
         value={text}
         onChange={(e) => setText(e.target.value)}
         rows={10}
+        readOnly={readOnly}
         placeholder="Pega aquí el prompt operativo que sigue el agente de IA de esta campaña..."
-        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono outline-none focus:ring-1 focus:ring-blue-400 resize-y"
+        className={`w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono outline-none resize-y ${
+          readOnly ? 'bg-slate-50 text-slate-500 cursor-default' : 'focus:ring-1 focus:ring-blue-400'
+        }`}
       />
-      <div className="flex items-center gap-3">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 transition-colors"
-        >
-          {saving ? 'Guardando...' : 'Guardar'}
-        </button>
-        {saved && <span className="text-xs text-emerald-600 font-medium">Guardado</span>}
-        {error && <span className="text-xs text-red-500">{error}</span>}
-      </div>
+      {!readOnly && (
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 transition-colors"
+          >
+            {saving ? 'Guardando...' : 'Guardar'}
+          </button>
+          {saved && <span className="text-xs text-emerald-600 font-medium">Guardado</span>}
+          {error && <span className="text-xs text-red-500">{error}</span>}
+        </div>
+      )}
     </div>
   );
 }
 
-function AutoAuditSwitch({ proyectoId, proyectoName, settings, onUpdate }) {
+function AutoAuditSwitch({ proyectoId, proyectoName, settings, onUpdate, readOnly }) {
   const [toggling, setToggling] = useState(false);
   const [confirmEnable, setConfirmEnable] = useState(false);
   const [confirmDisable, setConfirmDisable] = useState(false);
+
+  if (readOnly) {
+    return settings.enabled ? (
+      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-sm font-medium">
+        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+        Activa desde {new Date(settings.enabled_at).toLocaleString('es-CO')}
+      </span>
+    ) : (
+      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-500 text-sm font-medium">
+        <span className="w-2 h-2 rounded-full bg-slate-400" />
+        Inactiva
+      </span>
+    );
+  }
 
   const handleEnable = async () => {
     setToggling(true);
@@ -206,11 +225,18 @@ export default function IAConfiguracion() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Configuración IA</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Prompt operativo y auditoría automática por campaña
-        </p>
+      <div className="flex items-center gap-3 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Configuración IA</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Prompt operativo y auditoría automática por campaña
+          </p>
+        </div>
+        {user?.voicebot_read_only && (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
+            Solo lectura
+          </span>
+        )}
       </div>
 
       {loading ? (
@@ -230,6 +256,7 @@ export default function IAConfiguracion() {
                 proyectoName={PROYECTO_NAMES[proyectoId]}
                 settings={settings[proyectoId]}
                 onUpdate={(s) => updateSettings(proyectoId, s)}
+                readOnly={user?.voicebot_read_only}
               />
             )}
 
@@ -238,6 +265,7 @@ export default function IAConfiguracion() {
                 proyectoId={proyectoId}
                 initialText={prompts?.[proyectoId]?.prompt_text}
                 onSaved={load}
+                readOnly={user?.voicebot_read_only}
               />
             </div>
           </div>

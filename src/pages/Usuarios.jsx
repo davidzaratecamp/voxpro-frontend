@@ -35,6 +35,7 @@ const EMPTY_FORM = {
   role: 'coordinator',
   client_codes: [],
   active: true,
+  voicebot_read_only: false,
 };
 
 // ─── Modal ──────────────────────────────────────────────────────────────────
@@ -173,6 +174,21 @@ function UserModal({ user, onClose, onSaved }) {
               ))}
             </div>
           </div>
+
+          {/* Solo lectura (solo aplica a Auditor IA) */}
+          {form.role === 'auditor_ia' && (
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.voicebot_read_only}
+                onChange={(e) => setField('voicebot_read_only', e.target.checked)}
+                className="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-400"
+              />
+              <span className="text-sm text-slate-700">
+                Solo lectura <span className="text-slate-400">(ve las campañas pero no puede editar prompts ni activar/detener la auditoría automática)</span>
+              </span>
+            </label>
+          )}
 
           {/* Activo */}
           <label className="flex items-center gap-2 cursor-pointer">
@@ -397,9 +413,16 @@ export default function Usuarios() {
                   <td className="px-4 py-3 font-medium text-slate-800">{u.name}</td>
                   <td className="px-4 py-3 font-mono text-slate-500 text-xs">{u.username}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_COLORS[u.role] || 'bg-slate-100 text-slate-600'}`}>
-                      {ROLE_LABELS[u.role] || u.role}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_COLORS[u.role] || 'bg-slate-100 text-slate-600'}`}>
+                        {ROLE_LABELS[u.role] || u.role}
+                      </span>
+                      {u.role === 'auditor_ia' && u.voicebot_read_only && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
+                          Solo lectura
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
