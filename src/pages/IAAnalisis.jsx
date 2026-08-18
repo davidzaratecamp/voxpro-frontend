@@ -15,6 +15,7 @@ import {
   Filler,
 } from 'chart.js';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
+import ExcelJS from 'exceljs';
 import { voicebotApi } from '../api/voicebot';
 
 ChartJS.register(
@@ -104,6 +105,39 @@ function buildVolumeChartData(byProyecto) {
 }
 
 const VOLUME_OPTIONS = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { position: 'top', labels: { font: CHART_FONT, boxWidth: 12 } },
+    tooltip: BASE_TOOLTIP,
+  },
+  scales: {
+    y: { beginAtZero: true, ticks: { font: CHART_FONT, precision: 0 }, grid: { color: '#f1f5f9' } },
+    x: { ticks: { font: CHART_FONT }, grid: { display: false } },
+  },
+};
+
+function buildTransferOutcomeChartData(byProyecto) {
+  return {
+    labels: byProyecto.map((p) => p.proyecto_name),
+    datasets: [
+      {
+        label: 'Transferidas exitosamente',
+        data: byProyecto.map((p) => p.transferred),
+        backgroundColor: '#10b981',
+        borderRadius: 6,
+      },
+      {
+        label: 'Transferencia perdida (detectada)',
+        data: byProyecto.map((p) => p.missed_transfer),
+        backgroundColor: '#ef4444',
+        borderRadius: 6,
+      },
+    ],
+  };
+}
+
+const TRANSFER_OUTCOME_OPTIONS = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
@@ -207,6 +241,7 @@ export default function IAAnalisis() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -234,6 +269,132 @@ export default function IAAnalisis() {
     ? Math.round(byProyecto.reduce((s, p) => s + (p.avg_score ?? 0) * p.audited, 0) / totalAudited)
     : null;
 
+  const handleExcelExport = async () => {
+    setExporting(true);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const wb = new ExcelJS.Workbook();
+      wb.creator = 'VoxPro';
+      wb.created = new Date();
+
+      const FILL = {
+        darkBlue:  { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } },
+        blue:      { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } },
+        lightBlue: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDBEAFE' } },
+        alt:       { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } },
+      };
+      const BORDER_CELL = {
+        top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+      };
+      const applyTitle = (ws, text, span, row = 1) => {
+        ws.mergeCells(`A${row}:${span}${row}`);
+        const cell = ws.getCell(`A${row}`);
+        cell.value = text;
+        cell.fill = FILL.darkBlue;
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 14, name: 'Calibri' };
+        cell.alignment = { horizontal: 'left', vertical: 'middle' };
+        ws.getRow(row).height = 38;
+      };
+      const applySubtitle = (ws, text, span, row) => {
+        ws.mergeCells(`A${row}:${span}${row}`);
+        const cell = ws.getCell(`A${row}`);
+        cell.value = text;
+        cell.font = { italic: true, color: { argb: 'FF64748B' }, size: 10, name: 'Calibri' };
+        cell.alignment = { horizontal: 'left', vertical: 'middle' };
+        ws.getRow(row).height = 20;
+      };
+      const applySectionHeader = (ws, text, span, row) => {
+        ws.mergeCells(`A${row}:${span}${row}`);
+        const cell = ws.getCell(`A${row}`);
+        cell.value = text;
+        cell.fill = FILL.lightBlue;
+        cell.font = { bold: true, color: { argb: 'FF1E3A8A' }, size: 10, name: 'Calibri' };
+        cell.alignment = { horizontal: 'left', vertical: 'middle' };
+        ws.getRow(row).height = 22;
+      };
+      const applyHeaderRow = (ws, row, labels) => {
+        labels.forEach((label, i) => {
+          const cell = ws.getCell(row, i + 1);
+          cell.value = label;
+          cell.fill = FILL.blue;
+          cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11, name: 'Calibri' };
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.border = BORDER_CELL;
+        });
+      };
+      const applyDataRow = (ws, row, values, alt = false) => {
+        values.forEach((value, i) => {
+          const cell = ws.getCell(row, i + 1);
+          cell.value = value;
+          if (alt) cell.fill = FILL.alt;
+          cell.border = BORDER_CELL;
+          cell.alignment = { vertical: 'middle' };
+          cell.font = { name: 'Calibri', size: 10 };
+        });
+      };
+
+      // ── Sheet 1: Resumen ─────────────────────────────────────────────
+      const ws1 = wb.addWorksheet('Resumen', { properties: { tabColor: { argb: 'FF2563EB' } } });
+      ws1.columns = [{ width: 30 }, { width: 18 }, { width: 20 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 20 }];
+
+      applyTitle(ws1, 'VoxPro — Análisis IA (Voicebot Claro)', 'G', 1);
+      applySubtitle(ws1, `Últimos ${days} días   ·   Exportado: ${today}`, 'G', 2);
+
+      applySectionHeader(ws1, '  INDICADORES GENERALES', 'G', 4);
+      applyHeaderRow(ws1, 5, ['Métrica', 'Valor']);
+      const kpiRows = [
+        ['Llamadas totales', totalCalls],
+        ['Transferidas a asesor', totalTransferred],
+        ['Auditadas con IA', totalAudited],
+        ['Puntaje promedio', overallAvg != null ? overallAvg : '—'],
+        ['Transferencias perdidas', totalMissedTransfer],
+      ];
+      kpiRows.forEach(([label, value], i) => applyDataRow(ws1, 6 + i, [label, value], i % 2 === 1));
+
+      const byRow = 6 + kpiRows.length + 2;
+      applySectionHeader(ws1, '  POR CAMPAÑA', 'G', byRow);
+      applyHeaderRow(ws1, byRow + 1, ['Campaña', 'Total llamadas', 'Transferidas', 'Auditadas', 'Puntaje prom.', 'Transf. perdida', 'Distribución (Alto/Medio/Bajo)']);
+      byProyecto.forEach((p, i) => {
+        applyDataRow(ws1, byRow + 2 + i, [
+          p.proyecto_name,
+          p.total_calls,
+          p.transferred,
+          p.audited,
+          p.avg_score ?? '—',
+          p.missed_transfer,
+          `${p.high} / ${p.mid} / ${p.low}`,
+        ], i % 2 === 1);
+      });
+
+      // ── Sheet 2: Tendencia ───────────────────────────────────────────
+      const ws2 = wb.addWorksheet('Tendencia', { properties: { tabColor: { argb: 'FF8B5CF6' } } });
+      ws2.columns = [{ width: 16 }, { width: 20 }, { width: 16 }, { width: 16 }];
+      applyTitle(ws2, 'Tendencia diaria de puntaje', 'D', 1);
+      applySubtitle(ws2, `Últimos ${days} días`, 'D', 2);
+      applyHeaderRow(ws2, 4, ['Fecha', 'Campaña', 'Puntaje promedio', 'Llamadas auditadas']);
+      trend.forEach((t, i) => {
+        const proyectoName = byProyecto.find((p) => p.proyecto_id === t.proyecto_id)?.proyecto_name || t.proyecto_id;
+        applyDataRow(ws2, 5 + i, [t.date, proyectoName, t.avg_score, t.count], i % 2 === 1);
+      });
+
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `VoxPro_AnalisisIA_${days}dias_${today}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Error al exportar Excel: ' + (err.message || 'desconocido'));
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -243,15 +404,27 @@ export default function IAAnalisis() {
             Panorama de las llamadas de IA de Claro y sus auditorías automáticas
           </p>
         </div>
-        <select
-          value={days}
-          onChange={(e) => setDays(Number(e.target.value))}
-          className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all"
-        >
-          {DAY_OPTIONS.map((d) => (
-            <option key={d.value} value={d.value}>{d.label}</option>
-          ))}
-        </select>
+        <div className="flex items-center gap-3">
+          <select
+            value={days}
+            onChange={(e) => setDays(Number(e.target.value))}
+            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all"
+          >
+            {DAY_OPTIONS.map((d) => (
+              <option key={d.value} value={d.value}>{d.label}</option>
+            ))}
+          </select>
+          <button
+            onClick={handleExcelExport}
+            disabled={exporting || loading}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-medium transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            {exporting ? 'Exportando...' : 'Excel'}
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -371,6 +544,24 @@ export default function IAAnalisis() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Row 2.5: Transferidas vs. transferencia perdida */}
+      <div className="bg-white rounded-xl border border-slate-200 p-5">
+        <h2 className="text-sm font-semibold text-slate-700 mb-1">Transferidas vs. transferencia perdida</h2>
+        <p className="text-xs text-slate-400 mb-4">
+          Llamadas con intención clara de ser transferidas: cuántas sí se transfirieron vs. cuántas no, a pesar de la señal del cliente.
+          La transferencia perdida solo se mide entre llamadas ya auditadas — crece a medida que avanza la auditoría automática.
+        </p>
+        <div className="h-64">
+          {loading ? (
+            <div className="flex items-center justify-center h-full text-slate-400 text-sm">Cargando...</div>
+          ) : totalTransferred === 0 && totalMissedTransfer === 0 ? (
+            <div className="flex items-center justify-center h-full text-slate-400 text-sm">Sin datos</div>
+          ) : (
+            <Bar data={buildTransferOutcomeChartData(byProyecto)} options={TRANSFER_OUTCOME_OPTIONS} />
+          )}
+        </div>
       </div>
 
       {/* Row 3: Tendencia */}
