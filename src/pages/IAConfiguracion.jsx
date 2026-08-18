@@ -57,6 +57,7 @@ export default function IAConfiguracion() {
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
   const [confirmEnable, setConfirmEnable] = useState(false);
+  const [confirmDisable, setConfirmDisable] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -69,7 +70,7 @@ export default function IAConfiguracion() {
       setSettings(settingsRes.data.data);
     } catch {
       setPrompts({});
-      setSettings({ enabled: false, enabled_at: null });
+      setSettings({ enabled: false, enabled_at: null, disabled_reason: null });
     } finally {
       setLoading(false);
     }
@@ -93,6 +94,7 @@ export default function IAConfiguracion() {
     try {
       const res = await voicebotApi.disableAutoAudit();
       setSettings(res.data.data);
+      setConfirmDisable(false);
     } finally {
       setToggling(false);
     }
@@ -119,19 +121,43 @@ export default function IAConfiguracion() {
             </p>
 
             {settings?.enabled ? (
-              <div className="flex items-center gap-3">
-                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-sm font-medium">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  Activa desde {new Date(settings.enabled_at).toLocaleString('es-CO')}
-                </span>
-                <button
-                  onClick={handleDisable}
-                  disabled={toggling}
-                  className="px-4 py-2 text-sm font-medium rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40 transition-colors"
-                >
-                  {toggling ? 'Desactivando...' : 'Desactivar'}
-                </button>
-              </div>
+              confirmDisable ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-3 space-y-2">
+                  <p className="text-sm text-red-800">
+                    Al detener la auditoría automática, las llamadas nuevas dejan de calificarse solas de inmediato.
+                    Si la vuelves a activar más adelante, el corte se reinicia desde ese momento — las llamadas que
+                    pasen mientras está detenida <span className="font-semibold">no</span> se auditarán retroactivamente.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleDisable}
+                      disabled={toggling}
+                      className="px-4 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 transition-colors"
+                    >
+                      {toggling ? 'Deteniendo...' : 'Sí, detener ahora'}
+                    </button>
+                    <button
+                      onClick={() => setConfirmDisable(false)}
+                      className="px-4 py-2 text-sm font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-sm font-medium">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    Activa desde {new Date(settings.enabled_at).toLocaleString('es-CO')}
+                  </span>
+                  <button
+                    onClick={() => setConfirmDisable(true)}
+                    className="px-4 py-2 text-sm font-medium rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    Detener auditoría automática
+                  </button>
+                </div>
+              )
             ) : confirmEnable ? (
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
                 <p className="text-sm text-amber-800">
@@ -154,12 +180,22 @@ export default function IAConfiguracion() {
                 </div>
               </div>
             ) : (
-              <button
-                onClick={() => setConfirmEnable(true)}
-                className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-              >
-                Activar auditoría automática
-              </button>
+              <div className="space-y-3">
+                {settings?.disabled_reason && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                    <p className="text-sm text-amber-800">
+                      <span className="font-semibold">Se detuvo sola la última vez: </span>
+                      {settings.disabled_reason}
+                    </p>
+                  </div>
+                )}
+                <button
+                  onClick={() => setConfirmEnable(true)}
+                  className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                >
+                  Activar auditoría automática
+                </button>
+              </div>
             )}
           </div>
 
