@@ -10,8 +10,8 @@ export const voicebotApi = {
   savePrompt: (proyectoId, prompt_text) => client.put(`/voicebot/prompts/${proyectoId}`, { prompt_text }),
 
   getAuditSettings: () => client.get('/voicebot/audit-settings'),
-  enableAutoAudit: () => client.post('/voicebot/audit-settings/enable'),
-  disableAutoAudit: () => client.post('/voicebot/audit-settings/disable'),
+  enableAutoAudit: (proyectoId) => client.post(`/voicebot/audit-settings/${proyectoId}/enable`),
+  disableAutoAudit: (proyectoId) => client.post(`/voicebot/audit-settings/${proyectoId}/disable`),
 
   getStats: (days) => client.get('/voicebot/stats', { params: { days } }),
 };

@@ -1,11 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { voicebotApi } from '../api/voicebot';
+import { useAuth } from '../context/AuthContext';
 
-const PROYECTOS = [
-  { value: '', label: 'Todos los proyectos' },
-  { value: '12', label: 'Claro Hogar' },
-  { value: '13', label: 'Claro TyT' },
-];
+const PROYECTO_NAMES = { 12: 'Claro Hogar', 13: 'Claro TyT' };
+const CLIENT_CODE_TO_PROYECTO = { claro_hogar: 12, claro_tyt: 13 };
 
 const HANGUP_LABELS = {
   call_transfer: { label: 'Transferida a asesor', cls: 'bg-emerald-100 text-emerald-700' },
@@ -249,6 +247,15 @@ function matchesScoreFilter(score, filter) {
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function IAAuditorias() {
+  const { user } = useAuth();
+  const allowedProyectoIds = user?.role === 'gestor_usuarios'
+    ? [13, 12]
+    : (user?.client_codes || []).map((c) => CLIENT_CODE_TO_PROYECTO[c]).filter(Boolean).sort((a, b) => b - a);
+  const PROYECTOS = [
+    ...(allowedProyectoIds.length > 1 ? [{ value: '', label: 'Todos los proyectos' }] : []),
+    ...allowedProyectoIds.map((id) => ({ value: String(id), label: PROYECTO_NAMES[id] })),
+  ];
+
   const initialDates = defaultDates();
   const [dateFrom, setDateFrom] = useState(initialDates.from);
   const [dateTo, setDateTo] = useState(initialDates.to);
