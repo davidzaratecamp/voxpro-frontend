@@ -6,6 +6,7 @@ import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import IAAuditorias from './pages/IAAuditorias';
+import IAConfiguracion from './pages/IAConfiguracion';
 import AuditDetail from './pages/AuditDetail';
 import Auditorias from './pages/Auditorias';
 import Agentes from './pages/Agentes';
@@ -49,6 +50,14 @@ export default function App() {
             <Route path="/agent-recordings/:agentId" element={<AgentRecordings />} />
             <Route path="/ojt/agentes" element={<OJTAgentes />} />
             <Route path="/ia/auditorias" element={<IAAuditorias />} />
+            <Route
+              path="/ia/configuracion"
+              element={
+                <AdminRoute role={['auditor_ia', 'gestor_usuarios']}>
+                  <IAConfiguracion />
+                </AdminRoute>
+              }
+            />
             <Route path="/avaya/agentes" element={<AvayaAgentes />} />
             <Route path="/avaya/auditorias" element={<AvayaAuditorias />} />
             <Route path="/realtime" element={<RealtimeMonitor />} />
