@@ -257,6 +257,8 @@ export default function IAAuditorias() {
   const [missedTransferOnly, setMissedTransferOnly] = useState(false);
   const [phone, setPhone] = useState('');
   const [scoreFilter, setScoreFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 30;
 
   const [calls, setCalls] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -282,8 +284,12 @@ export default function IAAuditorias() {
   }, [dateFrom, dateTo, proyecto, onlyTransfer, missedTransferOnly, phone]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { setPage(1); }, [dateFrom, dateTo, proyecto, onlyTransfer, missedTransferOnly, phone, scoreFilter]);
 
   const filteredCalls = calls.filter((c) => matchesScoreFilter(c.ai_score, scoreFilter));
+  const totalPages = Math.max(1, Math.ceil(filteredCalls.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagedCalls = filteredCalls.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -384,7 +390,7 @@ export default function IAAuditorias() {
                   </td>
                 </tr>
               )}
-              {filteredCalls.map((c) => {
+              {pagedCalls.map((c) => {
                 const badge = hangupBadge(c.hangup_reason);
                 return (
                   <tr
@@ -431,6 +437,31 @@ export default function IAAuditorias() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {!loading && filteredCalls.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-slate-400">
+            Mostrando {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredCalls.length)} de {filteredCalls.length}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={safePage <= 1}
+              className="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Anterior
+            </button>
+            <span className="text-sm text-slate-500">Página {safePage} de {totalPages}</span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={safePage >= totalPages}
+              className="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Siguiente
+            </button>
+          </div>
         </div>
       )}
 
