@@ -12,4 +12,6 @@ export const voicebotApi = {
   getAuditSettings: () => client.get('/voicebot/audit-settings'),
   enableAutoAudit: () => client.post('/voicebot/audit-settings/enable'),
   disableAutoAudit: () => client.post('/voicebot/audit-settings/disable'),
+
+  getStats: (days) => client.get('/voicebot/stats', { params: { days } }),
 };
