@@ -130,17 +130,38 @@ function CallDetailModal({ callId, onClose }) {
                     Aún no auditada — puede ser anterior a la activación de la auditoría automática, estar en cola, o el switch está desactivado.
                   </p>
                 ) : (
-                  <div className="bg-slate-50 rounded-lg p-3 space-y-2">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-semibold ${scoreBadge(aiAudit.score)}`}>
-                      {aiAudit.score}/100
-                    </span>
-                    {aiAudit.summary && <p className="text-sm text-slate-700">{aiAudit.summary}</p>}
-                    {aiAudit.strengths && (
-                      <p className="text-xs text-emerald-700"><span className="font-semibold">Aciertos: </span>{aiAudit.strengths}</p>
-                    )}
-                    {aiAudit.issues && (
-                      <p className="text-xs text-red-600"><span className="font-semibold">Fallas: </span>{aiAudit.issues}</p>
-                    )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+                      <p className="text-[10px] uppercase font-semibold text-slate-400">Cumplimiento del prompt</p>
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-semibold ${scoreBadge(aiAudit.score)}`}>
+                        {aiAudit.score}/100
+                      </span>
+                      {aiAudit.summary && <p className="text-sm text-slate-700">{aiAudit.summary}</p>}
+                      {aiAudit.strengths && (
+                        <p className="text-xs text-emerald-700"><span className="font-semibold">Aciertos: </span>{aiAudit.strengths}</p>
+                      )}
+                      {aiAudit.issues && (
+                        <p className="text-xs text-red-600"><span className="font-semibold">Fallas: </span>{aiAudit.issues}</p>
+                      )}
+                    </div>
+
+                    <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+                      <p className="text-[10px] uppercase font-semibold text-slate-400">Coherencia del resumen para el agente humano</p>
+                      {aiAudit.summary_score == null ? (
+                        <p className="text-xs text-slate-400">No evaluado</p>
+                      ) : (
+                        <>
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-semibold ${scoreBadge(aiAudit.summary_score)}`}>
+                            {aiAudit.summary_score}/100
+                          </span>
+                          {aiAudit.summary_issues ? (
+                            <p className="text-xs text-red-600">{aiAudit.summary_issues}</p>
+                          ) : (
+                            <p className="text-xs text-emerald-700">El resumen es fiel a la conversación real.</p>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
