@@ -229,6 +229,7 @@ export default function IAAnalisis() {
   const totalCalls = byProyecto.reduce((s, p) => s + p.total_calls, 0);
   const totalTransferred = byProyecto.reduce((s, p) => s + p.transferred, 0);
   const totalAudited = byProyecto.reduce((s, p) => s + p.audited, 0);
+  const totalMissedTransfer = byProyecto.reduce((s, p) => s + (p.missed_transfer || 0), 0);
   const overallAvg = totalAudited > 0
     ? Math.round(byProyecto.reduce((s, p) => s + (p.avg_score ?? 0) * p.audited, 0) / totalAudited)
     : null;
@@ -260,7 +261,7 @@ export default function IAAnalisis() {
       )}
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <KpiCard
           label="Llamadas totales"
           value={loading ? '—' : totalCalls.toLocaleString('es-CO')}
@@ -302,6 +303,17 @@ export default function IAAnalisis() {
           icon={
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+            </svg>
+          }
+        />
+        <KpiCard
+          label="Transferencias perdidas"
+          value={loading ? '—' : totalMissedTransfer.toLocaleString('es-CO')}
+          color={totalMissedTransfer > 0 ? 'amber' : 'emerald'}
+          sublabel={totalAudited > 0 ? `${Math.round((totalMissedTransfer / totalAudited) * 100)}% de las auditadas` : ''}
+          icon={
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
             </svg>
           }
         />

@@ -130,6 +130,21 @@ function CallDetailModal({ callId, onClose }) {
                     Aún no auditada — puede ser anterior a la activación de la auditoría automática, estar en cola, o el switch está desactivado.
                   </p>
                 ) : (
+                  <>
+                  {aiAudit.missed_transfer && (
+                    <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 flex items-start gap-2">
+                      <svg className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                      </svg>
+                      <div>
+                        <p className="text-sm font-semibold text-amber-800">Transferencia perdida</p>
+                        <p className="text-xs text-amber-700 mt-0.5">
+                          El cliente mostró intención de ser transferido, pero la llamada no terminó transferida.
+                          {aiAudit.missed_transfer_reason && ` ${aiAudit.missed_transfer_reason}`}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="bg-slate-50 rounded-lg p-3 space-y-2">
                       <p className="text-[10px] uppercase font-semibold text-slate-400">Cumplimiento del prompt</p>
@@ -163,6 +178,7 @@ function CallDetailModal({ callId, onClose }) {
                       )}
                     </div>
                   </div>
+                  </>
                 )}
               </div>
 
@@ -238,6 +254,7 @@ export default function IAAuditorias() {
   const [dateTo, setDateTo] = useState(initialDates.to);
   const [proyecto, setProyecto] = useState('');
   const [onlyTransfer, setOnlyTransfer] = useState(false);
+  const [missedTransferOnly, setMissedTransferOnly] = useState(false);
   const [phone, setPhone] = useState('');
   const [scoreFilter, setScoreFilter] = useState('');
 
@@ -253,6 +270,7 @@ export default function IAAuditorias() {
       const params = { date_from: dateFrom, date_to: dateTo };
       if (proyecto) params.proyecto_id = proyecto;
       if (onlyTransfer) params.only_transfer = 'true';
+      if (missedTransferOnly) params.missed_transfer = 'true';
       if (phone.trim()) params.phone = phone.trim();
       const res = await voicebotApi.getCalls(params);
       setCalls(res.data.data || []);
@@ -261,7 +279,7 @@ export default function IAAuditorias() {
     } finally {
       setLoading(false);
     }
-  }, [dateFrom, dateTo, proyecto, onlyTransfer, phone]);
+  }, [dateFrom, dateTo, proyecto, onlyTransfer, missedTransferOnly, phone]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -314,6 +332,15 @@ export default function IAAuditorias() {
               className="rounded border-slate-300 text-blue-600 focus:ring-blue-400"
             />
             Solo transferidas
+          </label>
+          <label className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={missedTransferOnly}
+              onChange={(e) => setMissedTransferOnly(e.target.checked)}
+              className="rounded border-amber-300 text-amber-600 focus:ring-amber-400"
+            />
+            Transferencia perdida
           </label>
           <select
             value={scoreFilter}
@@ -376,9 +403,16 @@ export default function IAAuditorias() {
                     </td>
                     <td className="px-4 py-3 text-slate-500 text-xs">{formatDuration(c.duracion)}</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${badge.cls}`}>
-                        {badge.label}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${badge.cls}`}>
+                          {badge.label}
+                        </span>
+                        {c.missed_transfer && (
+                          <span title="Transferencia perdida" className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                            ⚠
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       {c.ai_score != null ? (
