@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { voicebotApi } from '../api/voicebot';
 import { useAuth } from '../context/AuthContext';
+import QualityScoreDisplay from '../components/QualityScoreDisplay';
 
 const PROYECTO_NAMES = { 12: 'Claro Hogar', 13: 'Claro TyT' };
 const CLIENT_CODE_TO_PROYECTO = { claro_hogar: 12, claro_tyt: 13 };
@@ -47,6 +48,10 @@ function CallDetailModal({ callId, onClose }) {
   const [audioLoading, setAudioLoading] = useState(false);
   const [audioError, setAudioError] = useState(null);
   const [aiAudit, setAiAudit] = useState(undefined); // undefined = cargando, null = sin auditar
+  const [continuation, setContinuation] = useState(undefined); // undefined = cargando/auditando
+  const [contAudioUrl, setContAudioUrl] = useState(null);
+  const [contAudioLoading, setContAudioLoading] = useState(false);
+  const [contAudioError, setContAudioError] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -61,7 +66,19 @@ function CallDetailModal({ callId, onClose }) {
       .then((res) => setAiAudit(res.data.data))
       .catch(() => setAiAudit(null));
 
-    return () => { if (audioUrl) URL.revokeObjectURL(audioUrl); };
+    // Busca y audita automáticamente la continuación (llamada del agente
+    // humano). El backend ya filtra por hangup_reason==='call_transfer' y
+    // devuelve null si no aplica — la primera vez puede tardar hasta 1 min
+    // (descarga audio + Gemini); las siguientes veces sale cacheada.
+    setContinuation(undefined);
+    voicebotApi.getContinuation(callId)
+      .then((res) => setContinuation(res.data.data))
+      .catch(() => setContinuation({ status: 'error', error_message: 'No se pudo cargar la continuación.' }));
+
+    return () => {
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
+      if (contAudioUrl) URL.revokeObjectURL(contAudioUrl);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [callId]);
 
@@ -75,6 +92,19 @@ function CallDetailModal({ callId, onClose }) {
       setAudioError('No se pudo cargar el audio de esta llamada.');
     } finally {
       setAudioLoading(false);
+    }
+  };
+
+  const handleLoadContAudio = async () => {
+    setContAudioLoading(true);
+    setContAudioError(null);
+    try {
+      const res = await voicebotApi.getContinuationAudio(callId);
+      setContAudioUrl(URL.createObjectURL(res.data));
+    } catch {
+      setContAudioError('No se pudo cargar el audio de la continuación.');
+    } finally {
+      setContAudioLoading(false);
     }
   };
 
@@ -216,6 +246,56 @@ function CallDetailModal({ callId, onClose }) {
                       );
                     })}
                   </div>
+                </div>
+              )}
+
+              {call.hangup_reason === 'call_transfer' && (
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-800 mb-2">Continuación — Agente humano</h3>
+                  {continuation === undefined ? (
+                    <p className="text-xs text-slate-400 bg-slate-50 rounded-lg p-3">
+                      Buscando y auditando la continuación con el agente humano... la primera vez puede tardar hasta un minuto.
+                    </p>
+                  ) : !continuation || continuation.status === 'not_found' ? (
+                    <p className="text-xs text-slate-400 bg-slate-50 rounded-lg p-3">
+                      No se encontró una llamada de agente humano asociada a esta transferencia.
+                    </p>
+                  ) : continuation.status === 'error' ? (
+                    <p className="text-xs text-red-500 bg-red-50 rounded-lg p-3">
+                      No se pudo auditar la continuación{continuation.error_message ? `: ${continuation.error_message}` : '.'}
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div><span className="text-slate-400">Agente:</span> {continuation.agente_nombre || continuation.agente_id}</div>
+                        <div><span className="text-slate-400">Hora:</span> {String(continuation.hora).slice(0, 8)}</div>
+                      </div>
+
+                      {!contAudioUrl ? (
+                        <button
+                          onClick={handleLoadContAudio}
+                          disabled={contAudioLoading}
+                          className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                        >
+                          {contAudioLoading ? 'Cargando audio...' : 'Reproducir'}
+                        </button>
+                      ) : (
+                        <audio controls src={contAudioUrl} className="w-full" />
+                      )}
+                      {contAudioError && <p className="text-xs text-red-500">{contAudioError}</p>}
+
+                      {continuation.status === 'scored' && (
+                        <QualityScoreDisplay
+                          score={continuation.score}
+                          highImpactFailed={continuation.high_impact_failed}
+                          notes={continuation.notes}
+                          general={continuation.criteria_general}
+                          highImpact={continuation.criteria_high_impact}
+                          transcription={continuation.transcription}
+                        />
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </>

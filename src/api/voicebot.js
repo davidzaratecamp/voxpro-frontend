@@ -5,6 +5,8 @@ export const voicebotApi = {
   getCall: (callId) => client.get(`/voicebot/calls/${callId}`),
   getAudio: (callId) => client.get(`/voicebot/calls/${callId}/audio`, { responseType: 'blob', timeout: 60000 }),
   getCallAudit: (callId) => client.get(`/voicebot/calls/${callId}/audit`),
+  getContinuation: (callId) => client.get(`/voicebot/calls/${callId}/continuation`, { timeout: 120000 }),
+  getContinuationAudio: (callId) => client.get(`/voicebot/calls/${callId}/continuation/audio`, { responseType: 'blob', timeout: 60000 }),
 
   getPrompts: () => client.get('/voicebot/prompts'),
   savePrompt: (proyectoId, prompt_text) => client.put(`/voicebot/prompts/${proyectoId}`, { prompt_text }),
