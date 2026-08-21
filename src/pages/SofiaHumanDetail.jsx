@@ -38,6 +38,9 @@ export default function SofiaHumanDetail() {
   const [audioLoading, setAudioLoading] = useState(false);
   const audioRef = useRef(null);
 
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeError, setAnalyzeError] = useState('');
+
   useEffect(() => {
     return () => { if (audioUrl) URL.revokeObjectURL(audioUrl); };
   }, [audioUrl]);
@@ -68,6 +71,24 @@ export default function SofiaHumanDetail() {
       console.error('Error saving:', err);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleAnalyze = async () => {
+    setAnalyzing(true);
+    setAnalyzeError('');
+    try {
+      await sofiaHumanApi.analyze(id);
+      loadSelection();
+    } catch (err) {
+      const httpStatus = err.response?.status;
+      const msg = httpStatus === 503 || httpStatus === 429
+        ? err.response?.data?.message || 'El análisis automático no está disponible ahora mismo. Puedes calificar manualmente mientras tanto.'
+        : err.response?.data?.message || 'Error al analizar la llamada';
+      setAnalyzeError(msg);
+      if (httpStatus === 503 || httpStatus === 429) setShowForm(true);
+    } finally {
+      setAnalyzing(false);
     }
   };
 
@@ -186,21 +207,46 @@ export default function SofiaHumanDetail() {
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-5">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-slate-800">Calificación de calidad</h3>
-          {(selection.score == null || !showForm) && (
-            <button
-              onClick={() => setShowForm((v) => !v)}
-              className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium border bg-white text-slate-600 border-slate-300 hover:border-slate-400 transition-colors"
-            >
-              {showForm ? 'Cancelar' : selection.score != null ? 'Editar calificación' : 'Calificar'}
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {!analyzing && (selection.score == null || !showForm) && (
+              <button
+                onClick={() => setShowForm((v) => !v)}
+                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium border transition-colors ${showForm
+                  ? 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
+                  : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'}`}
+              >
+                {showForm ? 'Cancelar' : selection.score != null ? 'Editar calificación' : 'Calificar Manualmente'}
+              </button>
+            )}
+            {selection.score == null && !showForm && (
+              <button
+                onClick={handleAnalyze}
+                disabled={analyzing}
+                className="inline-flex items-center gap-2 bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {analyzing ? 'Analizando...' : 'Auditar con IA'}
+              </button>
+            )}
+          </div>
         </div>
 
-        {!showForm && selection.score != null && (
+        {analyzeError && (
+          <div className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2.5">{analyzeError}</div>
+        )}
+
+        {analyzing && (
+          <div className="flex flex-col items-center py-8 text-slate-500 gap-3">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+            <p className="text-sm">Descargando audio y analizando con IA...</p>
+            <p className="text-xs text-slate-400">Esto puede tomar 30-60 segundos</p>
+          </div>
+        )}
+
+        {!analyzing && !showForm && selection.score != null && (
           <ScoreSummary selection={selection} />
         )}
 
-        {showForm && (
+        {!analyzing && showForm && (
           <QualificationForm
             selectionId={id}
             clientCode={selection.client_code}
@@ -211,7 +257,7 @@ export default function SofiaHumanDetail() {
           />
         )}
 
-        {!showForm && selection.score == null && (
+        {!analyzing && !showForm && selection.score == null && (
           <p className="text-sm text-slate-400 py-4 text-center">Esta llamada aún no ha sido calificada.</p>
         )}
       </div>
@@ -222,23 +268,144 @@ export default function SofiaHumanDetail() {
 function ScoreSummary({ selection }) {
   const score = selection.score;
   const highImpactFailed = selection.high_impact_failed;
+  const general = selection.criteria_general || [];
+  const highImpact = selection.criteria_high_impact || [];
+
   return (
-    <div className={`rounded-lg p-4 ${highImpactFailed ? 'bg-red-50 border border-red-200' : score >= 80 ? 'bg-emerald-50 border border-emerald-200' : score >= 60 ? 'bg-amber-50 border border-amber-200' : 'bg-red-50 border border-red-200'}`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Puntaje</p>
-          <p className={`text-3xl font-bold mt-0.5 ${highImpactFailed ? 'text-red-600' : score >= 80 ? 'text-emerald-600' : score >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
-            {score}<span className="text-lg font-normal text-slate-400">/100</span>
-          </p>
+    <div className="space-y-5">
+      <div className={`rounded-lg p-4 ${highImpactFailed ? 'bg-red-50 border border-red-200' : score >= 80 ? 'bg-emerald-50 border border-emerald-200' : score >= 60 ? 'bg-amber-50 border border-amber-200' : 'bg-red-50 border border-red-200'}`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Puntaje</p>
+            <p className={`text-3xl font-bold mt-0.5 ${highImpactFailed ? 'text-red-600' : score >= 80 ? 'text-emerald-600' : score >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
+              {score}<span className="text-lg font-normal text-slate-400">/100</span>
+            </p>
+          </div>
+          {highImpactFailed && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700">
+              Falla de alto impacto
+            </span>
+          )}
         </div>
-        {highImpactFailed && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700">
-            Falla de alto impacto
-          </span>
-        )}
+        {selection.notes && <p className="text-sm text-slate-600 mt-2">{selection.notes}</p>}
       </div>
+
+      {highImpact.length > 0 && (
+        <div>
+          <h4 className="text-sm font-semibold text-slate-800 mb-2">Items de Alto Impacto</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {highImpact.map((item) => (
+              <div key={item.key} className={`rounded-lg px-3 py-2 text-sm ${item.cumple ? 'bg-emerald-50' : 'bg-red-50'}`}>
+                <span className={item.cumple ? 'text-emerald-800' : 'text-red-800 font-medium'}>{item.label}</span>
+                {item.observacion && (
+                  <p className={`text-xs mt-0.5 ${item.cumple ? 'text-emerald-600' : 'text-red-600'}`}>{item.observacion}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {general.length > 0 && (
+        <div>
+          <h4 className="text-sm font-semibold text-slate-800 mb-2">Criterios Generales</h4>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100">
+                  <th className="text-left py-2 pr-4 text-xs font-medium text-slate-500">Criterio</th>
+                  <th className="text-center py-2 px-3 text-xs font-medium text-slate-500 w-16">Peso</th>
+                  <th className="text-center py-2 px-3 text-xs font-medium text-slate-500 w-20">Resultado</th>
+                  <th className="text-left py-2 pl-3 text-xs font-medium text-slate-500">Observación</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {general.map((item) => (
+                  <tr key={item.key}>
+                    <td className="py-2 pr-4 text-slate-700">{item.label}</td>
+                    <td className="py-2 px-3 text-center text-slate-500">{item.weight}%</td>
+                    <td className="py-2 px-3 text-center">
+                      {item.na ? (
+                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">N/A</span>
+                      ) : item.cumple ? (
+                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">Cumple</span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">No</span>
+                      )}
+                    </td>
+                    <td className="py-2 pl-3 text-xs text-slate-500">{item.observacion || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {selection.transcription && (
+        <div>
+          <h4 className="text-sm font-semibold text-slate-800 mb-2">Transcripción</h4>
+          <div className="bg-slate-50 rounded-lg p-4 max-h-96 overflow-y-auto">
+            <div className="text-sm text-slate-700 whitespace-pre-wrap font-sans leading-relaxed">
+              <HighlightedTranscription text={selection.transcription} general={general} highImpact={highImpact} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+function HighlightedTranscription({ text, general, highImpact }) {
+  const citations = [];
+  for (const item of general) {
+    if (!item.cumple && !item.na && item.cita) citations.push({ text: item.cita, label: item.label });
+  }
+  for (const item of highImpact) {
+    if (!item.cumple && item.cita) citations.push({ text: item.cita, label: item.label });
+  }
+  if (citations.length === 0) return <>{text}</>;
+
+  citations.sort((a, b) => b.text.length - a.text.length);
+  const marks = [];
+  for (const citation of citations) {
+    const needle = citation.text.toLowerCase();
+    const haystack = text.toLowerCase();
+    let startIdx = 0;
+    while (true) {
+      const idx = haystack.indexOf(needle, startIdx);
+      if (idx === -1) break;
+      marks.push({ start: idx, end: idx + citation.text.length, label: citation.label });
+      startIdx = idx + 1;
+    }
+  }
+  if (marks.length === 0) return <>{text}</>;
+
+  marks.sort((a, b) => a.start - b.start);
+  const merged = [marks[0]];
+  for (let i = 1; i < marks.length; i++) {
+    const prev = merged[merged.length - 1];
+    if (marks[i].start <= prev.end) {
+      prev.end = Math.max(prev.end, marks[i].end);
+      prev.label = prev.label + ', ' + marks[i].label;
+    } else {
+      merged.push({ ...marks[i] });
+    }
+  }
+
+  const parts = [];
+  let cursor = 0;
+  for (const mark of merged) {
+    if (mark.start > cursor) parts.push(<span key={`t-${cursor}`}>{text.slice(cursor, mark.start)}</span>);
+    parts.push(
+      <span key={`h-${mark.start}`} className="bg-red-100 text-red-800 rounded px-0.5 relative group cursor-help" title={mark.label}>
+        {text.slice(mark.start, mark.end)}
+      </span>
+    );
+    cursor = mark.end;
+  }
+  if (cursor < text.length) parts.push(<span key={`t-${cursor}`}>{text.slice(cursor)}</span>);
+  return <>{parts}</>;
 }
 
 function QualificationForm({ selectionId, clientCode, initialGeneral, initialHighImpact, onSaved, onCancel }) {

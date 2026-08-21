@@ -10,6 +10,7 @@ export const sofiaHumanApi = {
   updateSelection: (id, payload) => client.patch(`/sofia-human/selections/${id}`, payload),
   getAudio: (id) => client.get(`/sofia-human/selections/${id}/audio`, { responseType: 'blob', timeout: 60000 }),
   saveScore: (id, payload) => client.post(`/sofia-human/selections/${id}/score`, payload),
+  analyze: (id) => client.post(`/sofia-human/selections/${id}/analyze`, {}, { timeout: 300000 }),
 
   getCriteriaTemplate: (clientCode) => client.get(`/sofia-human/criteria/${clientCode}`),
 };
