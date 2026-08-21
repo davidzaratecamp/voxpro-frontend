@@ -120,7 +120,10 @@ export default function SofiaHumanAuditorias() {
                 const inProg = call.selection_id && !done;
                 return (
                   <tr key={call.registro_llamada_id} className={done ? 'bg-emerald-50' : ''}>
-                    <td className="py-2 pr-4 font-medium text-slate-800">{call.agente_id}</td>
+                    <td className="py-2 pr-4">
+                      <span className="font-medium text-slate-800">{call.agente_nombre || call.agente_id}</span>
+                      {call.agente_nombre && <span className="block text-xs text-slate-400">{call.agente_id}</span>}
+                    </td>
                     <td className="py-2 pr-4 text-slate-600 text-xs">{CLIENT_LABELS[call.client_code] || call.client_code}</td>
                     <td className="py-2 pr-4 text-slate-600">{call.telefono || '—'}</td>
                     <td className="py-2 pr-4 text-slate-500 text-xs">{call.hora || '—'}</td>

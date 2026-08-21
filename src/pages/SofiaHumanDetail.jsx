@@ -113,7 +113,8 @@ export default function SofiaHumanDetail() {
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <h3 className="text-lg font-semibold text-slate-800 mb-4">Llamada transferida por SOFIA</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Info label="Agente" value={selection.agente_id} />
+          <Info label="Agente" value={selection.agente_nombre || selection.agente_id} />
+          {selection.agente_nombre && <Info label="Cédula" value={selection.agente_id} />}
           <Info label="Campaña" value={CLIENT_LABELS[selection.client_code] || selection.client_code} />
           <Info label="Teléfono" value={selection.telefono || '—'} />
           <Info label="Duración" value={formatDuration(selection.duracion)} />
