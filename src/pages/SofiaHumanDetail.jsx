@@ -168,43 +168,6 @@ export default function SofiaHumanDetail() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-5">
-        <h3 className="text-lg font-semibold text-slate-800">Estado</h3>
-        <div className="flex flex-wrap gap-2">
-          {STATUS_OPTIONS.map((s) => (
-            <button
-              key={s}
-              onClick={() => setStatus(s)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${status === s
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'}`}
-            >
-              {STATUS_LABELS[s]}
-            </button>
-          ))}
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Notas</label>
-          <textarea
-            rows={3}
-            value={statusNotes}
-            onChange={(e) => setStatusNotes(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-            placeholder="Observaciones sobre la llamada..."
-          />
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleSaveStatus}
-            disabled={saving}
-            className="bg-blue-600 text-white rounded-lg px-5 py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            {saving ? 'Guardando...' : 'Guardar estado'}
-          </button>
-          {saved && <span className="text-sm text-emerald-600">Guardado correctamente</span>}
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-5">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-slate-800">Calificación de calidad</h3>
           <div className="flex items-center gap-2">
@@ -260,6 +223,43 @@ export default function SofiaHumanDetail() {
         {!analyzing && !showForm && selection.score == null && (
           <p className="text-sm text-slate-400 py-4 text-center">Esta llamada aún no ha sido calificada.</p>
         )}
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-5">
+        <h3 className="text-lg font-semibold text-slate-800">Estado</h3>
+        <div className="flex flex-wrap gap-2">
+          {STATUS_OPTIONS.map((s) => (
+            <button
+              key={s}
+              onClick={() => setStatus(s)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${status === s
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'}`}
+            >
+              {STATUS_LABELS[s]}
+            </button>
+          ))}
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Notas</label>
+          <textarea
+            rows={3}
+            value={statusNotes}
+            onChange={(e) => setStatusNotes(e.target.value)}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            placeholder="Observaciones sobre la llamada..."
+          />
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleSaveStatus}
+            disabled={saving}
+            className="bg-blue-600 text-white rounded-lg px-5 py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          >
+            {saving ? 'Guardando...' : 'Guardar estado'}
+          </button>
+          {saved && <span className="text-sm text-emerald-600">Guardado correctamente</span>}
+        </div>
       </div>
     </div>
   );
