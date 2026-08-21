@@ -77,6 +77,7 @@ function SeleccionarTab({ allowedClientCodes }) {
   const [date, setDate] = useState(todayStr());
   const [clientCode, setClientCode] = useState(allowedClientCodes[0] || '');
   const [agentSearch, setAgentSearch] = useState('');
+  const [phoneSearch, setPhoneSearch] = useState('');
   const [calls, setCalls] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -87,15 +88,17 @@ function SeleccionarTab({ allowedClientCodes }) {
     setError('');
     const params = { date };
     if (clientCode) params.client_code = clientCode;
+    if (phoneSearch) params.telefono = phoneSearch;
     sofiaHumanApi
       .getCallsForDay(params)
       .then((res) => setCalls(res.data.data))
       .catch((err) => setError(err.response?.data?.message || 'Error al cargar las llamadas'))
       .finally(() => setLoading(false));
-  }, [date, clientCode]);
+  }, [date, clientCode, phoneSearch]);
 
   useEffect(() => {
-    fetchCalls();
+    const t = setTimeout(fetchCalls, 300);
+    return () => clearTimeout(t);
   }, [fetchCalls]);
 
   const handleAuditar = async (call) => {
@@ -151,6 +154,16 @@ function SeleccionarTab({ allowedClientCodes }) {
               value={agentSearch}
               onChange={(e) => setAgentSearch(e.target.value)}
               placeholder="Nombre o cédula..."
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Teléfono del cliente</label>
+            <input
+              type="text"
+              value={phoneSearch}
+              onChange={(e) => setPhoneSearch(e.target.value)}
+              placeholder="Número..."
               className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -223,6 +236,7 @@ function HistorialTab({ allowedClientCodes }) {
   const [clientCode, setClientCode] = useState('');
   const [status, setStatus] = useState('');
   const [agentSearch, setAgentSearch] = useState('');
+  const [phoneSearch, setPhoneSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [rows, setRows] = useState(null);
@@ -236,6 +250,7 @@ function HistorialTab({ allowedClientCodes }) {
     if (clientCode) params.client_code = clientCode;
     if (status) params.status = status;
     if (agentSearch) params.agente = agentSearch;
+    if (phoneSearch) params.telefono = phoneSearch;
     if (dateFrom) params.date_from = dateFrom;
     if (dateTo) params.date_to = dateTo;
     sofiaHumanApi
@@ -243,7 +258,7 @@ function HistorialTab({ allowedClientCodes }) {
       .then((res) => setRows(res.data.data))
       .catch((err) => setError(err.response?.data?.message || 'Error al cargar el historial'))
       .finally(() => setLoading(false));
-  }, [clientCode, status, agentSearch, dateFrom, dateTo]);
+  }, [clientCode, status, agentSearch, phoneSearch, dateFrom, dateTo]);
 
   useEffect(() => {
     const t = setTimeout(fetchRows, 300);
@@ -261,6 +276,16 @@ function HistorialTab({ allowedClientCodes }) {
               value={agentSearch}
               onChange={(e) => setAgentSearch(e.target.value)}
               placeholder="Nombre o cédula..."
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Teléfono del cliente</label>
+            <input
+              type="text"
+              value={phoneSearch}
+              onChange={(e) => setPhoneSearch(e.target.value)}
+              placeholder="Número..."
               className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -318,6 +343,7 @@ function HistorialTab({ allowedClientCodes }) {
               <tr className="text-xs font-medium text-slate-500 uppercase tracking-wide border-b border-slate-100">
                 <th className="py-2 text-left pr-4">Agente</th>
                 <th className="py-2 text-left pr-4">Campaña</th>
+                <th className="py-2 text-left pr-4">Teléfono</th>
                 <th className="py-2 text-left pr-4">Fecha</th>
                 <th className="py-2 text-left pr-4">Estado</th>
                 <th className="py-2 text-left pr-4">Puntaje</th>
@@ -332,6 +358,7 @@ function HistorialTab({ allowedClientCodes }) {
                     {row.agente_nombre && <span className="block text-xs text-slate-400">{row.agente_id}</span>}
                   </td>
                   <td className="py-2 pr-4 text-slate-600 text-xs">{CLIENT_LABELS[row.client_code] || row.client_code}</td>
+                  <td className="py-2 pr-4 text-slate-600">{row.telefono || '—'}</td>
                   <td className="py-2 pr-4 text-slate-500 text-xs">{formatDate(row.fecha)}</td>
                   <td className="py-2 pr-4">
                     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[row.status]}`}>
