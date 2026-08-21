@@ -22,6 +22,8 @@ import AvayaAuditorias from './pages/AvayaAuditorias';
 import RealtimeMonitor from './pages/RealtimeMonitor';
 import HC from './pages/HC';
 import DailyAnalysis from './pages/DailyAnalysis';
+import SofiaHumanAuditorias from './pages/SofiaHumanAuditorias';
+import SofiaHumanDetail from './pages/SofiaHumanDetail';
 
 function Home() {
   const { user } = useAuth();
@@ -64,6 +66,22 @@ export default function App() {
               element={
                 <AdminRoute role={['auditor_ia', 'gestor_usuarios']}>
                   <IAConfiguracion />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/sofia-ia"
+              element={
+                <AdminRoute role={['supervisor_calidad', 'gestor_usuarios']}>
+                  <SofiaHumanAuditorias />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/sofia-ia/:id"
+              element={
+                <AdminRoute role={['supervisor_calidad', 'gestor_usuarios']}>
+                  <SofiaHumanDetail />
                 </AdminRoute>
               }
             />
