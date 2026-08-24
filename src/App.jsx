@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import IAAuditorias from './pages/IAAuditorias';
 import IAConfiguracion from './pages/IAConfiguracion';
+import PasswordGate from './components/PasswordGate';
 import IAAnalisis from './pages/IAAnalisis';
 import AuditDetail from './pages/AuditDetail';
 import Auditorias from './pages/Auditorias';
@@ -66,7 +67,9 @@ export default function App() {
               path="/ia/configuracion"
               element={
                 <AdminRoute role={['auditor_ia', 'gestor_usuarios']}>
-                  <IAConfiguracion />
+                  <PasswordGate sessionKey="voxpro_ia_config_unlocked">
+                    <IAConfiguracion />
+                  </PasswordGate>
                 </AdminRoute>
               }
             />

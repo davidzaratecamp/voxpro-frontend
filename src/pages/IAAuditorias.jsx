@@ -1,7 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { voicebotApi } from '../api/voicebot';
 import { useAuth } from '../context/AuthContext';
 import QualityScoreDisplay from '../components/QualityScoreDisplay';
+import AgentFeedbackTemplate from '../components/AgentFeedbackTemplate';
 
 const PROYECTO_NAMES = { 12: 'Claro Hogar', 13: 'Claro TyT' };
 const CLIENT_CODE_TO_PROYECTO = { claro_hogar: 12, claro_tyt: 13 };
@@ -52,6 +55,8 @@ function CallDetailModal({ callId, onClose }) {
   const [contAudioUrl, setContAudioUrl] = useState(null);
   const [contAudioLoading, setContAudioLoading] = useState(false);
   const [contAudioError, setContAudioError] = useState(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const feedbackRef = useRef(null);
 
   useEffect(() => {
     setLoading(true);
@@ -105,6 +110,55 @@ function CallDetailModal({ callId, onClose }) {
       setContAudioError('No se pudo cargar el audio de la continuación.');
     } finally {
       setContAudioLoading(false);
+    }
+  };
+
+  const handleDownloadFeedbackPdf = async () => {
+    if (!feedbackRef.current) return;
+    setDownloadingPdf(true);
+    try {
+      const canvas = await html2canvas(feedbackRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 10;
+      const contentWidth = pageWidth - margin * 2;
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = contentWidth / imgWidth;
+      const scaledHeight = imgHeight * ratio;
+
+      let remaining = scaledHeight;
+      while (remaining > 0) {
+        const sliceHeight = Math.min(remaining, pageHeight - margin * 2);
+        const srcY = (scaledHeight - remaining) / ratio;
+
+        const sliceCanvas = document.createElement('canvas');
+        sliceCanvas.width = imgWidth;
+        sliceCanvas.height = sliceHeight / ratio;
+        const ctx = sliceCanvas.getContext('2d');
+        ctx.drawImage(canvas, 0, srcY, imgWidth, sliceHeight / ratio, 0, 0, imgWidth, sliceHeight / ratio);
+
+        const sliceData = sliceCanvas.toDataURL('image/png');
+        if (remaining < scaledHeight) pdf.addPage();
+        pdf.addImage(sliceData, 'PNG', margin, margin, contentWidth, sliceHeight);
+
+        remaining -= sliceHeight;
+      }
+
+      const agentSlug = (continuation.agente_nombre || continuation.agente_id || 'agente').replace(/[^a-zA-Z0-9]+/g, '_');
+      pdf.save(`Feedback_${agentSlug}_${continuation.fecha}.pdf`);
+    } catch (err) {
+      alert('Error al generar el PDF: ' + err.message);
+    } finally {
+      setDownloadingPdf(false);
     }
   };
 
@@ -285,14 +339,28 @@ function CallDetailModal({ callId, onClose }) {
                       {contAudioError && <p className="text-xs text-red-500">{contAudioError}</p>}
 
                       {continuation.status === 'scored' && (
-                        <QualityScoreDisplay
-                          score={continuation.score}
-                          highImpactFailed={continuation.high_impact_failed}
-                          notes={continuation.notes}
-                          general={continuation.criteria_general}
-                          highImpact={continuation.criteria_high_impact}
-                          transcription={continuation.transcription}
-                        />
+                        <>
+                          <div className="flex justify-end">
+                            <button
+                              onClick={handleDownloadFeedbackPdf}
+                              disabled={downloadingPdf}
+                              className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 text-white hover:bg-slate-900 disabled:opacity-50 transition-colors"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                              </svg>
+                              {downloadingPdf ? 'Generando PDF...' : 'Descargar PDF de feedback'}
+                            </button>
+                          </div>
+                          <QualityScoreDisplay
+                            score={continuation.score}
+                            highImpactFailed={continuation.high_impact_failed}
+                            notes={continuation.notes}
+                            general={continuation.criteria_general}
+                            highImpact={continuation.criteria_high_impact}
+                            transcription={continuation.transcription}
+                          />
+                        </>
                       )}
                     </div>
                   )}
@@ -302,16 +370,30 @@ function CallDetailModal({ callId, onClose }) {
           )}
         </div>
       </div>
+
+      {continuation?.status === 'scored' && (
+        <div style={{ position: 'fixed', top: 0, left: '-9999px' }}>
+          <AgentFeedbackTemplate ref={feedbackRef} continuation={continuation} />
+        </div>
+      )}
     </div>
   );
 }
 
 const SCORE_FILTERS = [
-  { value: '',        label: 'Todos los puntajes' },
-  { value: 'unaudited', label: 'Sin auditar' },
-  { value: 'low',      label: 'Bajo (<60)' },
-  { value: 'mid',      label: 'Medio (60-79)' },
-  { value: 'high',     label: 'Alto (≥80)' },
+  { value: '',        label: 'Puntaje SOFIA: todos' },
+  { value: 'unaudited', label: 'SOFIA: sin auditar' },
+  { value: 'low',      label: 'SOFIA: bajo (<60)' },
+  { value: 'mid',      label: 'SOFIA: medio (60-79)' },
+  { value: 'high',     label: 'SOFIA: alto (≥80)' },
+];
+
+const AGENT_SCORE_FILTERS = [
+  { value: '',        label: 'Puntaje agente: todos' },
+  { value: 'unaudited', label: 'Agente: sin auditar' },
+  { value: 'low',      label: 'Agente: bajo (<60)' },
+  { value: 'mid',      label: 'Agente: medio (60-79)' },
+  { value: 'high',     label: 'Agente: alto (≥80)' },
 ];
 
 function matchesScoreFilter(score, filter) {
@@ -344,6 +426,7 @@ export default function IAAuditorias() {
   const [missedTransferOnly, setMissedTransferOnly] = useState(false);
   const [phone, setPhone] = useState('');
   const [scoreFilter, setScoreFilter] = useState('');
+  const [agentScoreFilter, setAgentScoreFilter] = useState('');
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 30;
 
@@ -371,9 +454,11 @@ export default function IAAuditorias() {
   }, [dateFrom, dateTo, proyecto, onlyTransfer, missedTransferOnly, phone]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setPage(1); }, [dateFrom, dateTo, proyecto, onlyTransfer, missedTransferOnly, phone, scoreFilter]);
+  useEffect(() => { setPage(1); }, [dateFrom, dateTo, proyecto, onlyTransfer, missedTransferOnly, phone, scoreFilter, agentScoreFilter]);
 
-  const filteredCalls = calls.filter((c) => matchesScoreFilter(c.ai_score, scoreFilter));
+  const filteredCalls = calls
+    .filter((c) => matchesScoreFilter(c.ai_score, scoreFilter))
+    .filter((c) => matchesScoreFilter(c.agente_score, agentScoreFilter));
   const totalPages = Math.max(1, Math.ceil(filteredCalls.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const pagedCalls = filteredCalls.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
@@ -444,6 +529,15 @@ export default function IAAuditorias() {
               <option key={f.value} value={f.value}>{f.label}</option>
             ))}
           </select>
+          <select
+            value={agentScoreFilter}
+            onChange={(e) => setAgentScoreFilter(e.target.value)}
+            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all"
+          >
+            {AGENT_SCORE_FILTERS.map((f) => (
+              <option key={f.value} value={f.value}>{f.label}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -465,14 +559,15 @@ export default function IAAuditorias() {
                 <th className="px-4 py-3 text-left font-medium">Proyecto</th>
                 <th className="px-4 py-3 text-left font-medium">Duración</th>
                 <th className="px-4 py-3 text-left font-medium">Resultado</th>
-                <th className="px-4 py-3 text-left font-medium">Puntaje</th>
+                <th className="px-4 py-3 text-left font-medium">Puntaje SOFIA</th>
+                <th className="px-4 py-3 text-left font-medium">Puntaje agente</th>
                 <th className="px-4 py-3 text-left font-medium">Resumen</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredCalls.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
+                  <td colSpan={8} className="px-4 py-10 text-center text-slate-400">
                     No hay llamadas en el rango seleccionado.
                   </td>
                 </tr>
@@ -511,6 +606,15 @@ export default function IAAuditorias() {
                       {c.ai_score != null ? (
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${scoreBadge(c.ai_score)}`}>
                           {c.ai_score}/100
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-300">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {c.agente_score != null ? (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${scoreBadge(c.agente_score)}`}>
+                          {c.agente_score}/100
                         </span>
                       ) : (
                         <span className="text-xs text-slate-300">—</span>
