@@ -5,6 +5,7 @@ export const sofiaHumanApi = {
   selectOne: (registro_llamada_id, proyecto_id) =>
     client.post('/sofia-human/select', { registro_llamada_id, proyecto_id }),
   listSelections: (params) => client.get('/sofia-human/selections', { params }),
+  getCommercialStats: (params) => client.get('/sofia-human/commercial-stats', { params }),
 
   getSelection: (id) => client.get(`/sofia-human/selections/${id}`),
   updateSelection: (id, payload) => client.patch(`/sofia-human/selections/${id}`, payload),

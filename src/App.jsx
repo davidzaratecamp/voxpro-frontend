@@ -24,6 +24,7 @@ import HC from './pages/HC';
 import DailyAnalysis from './pages/DailyAnalysis';
 import SofiaHumanAuditorias from './pages/SofiaHumanAuditorias';
 import SofiaHumanDetail from './pages/SofiaHumanDetail';
+import SofiaAnalisis from './pages/SofiaAnalisis';
 
 function Home() {
   const { user } = useAuth();
@@ -82,6 +83,14 @@ export default function App() {
               element={
                 <AdminRoute role={['supervisor_calidad', 'gestor_usuarios']}>
                   <SofiaHumanDetail />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/sofia-ia/analisis"
+              element={
+                <AdminRoute role={['supervisor_calidad', 'gestor_usuarios']}>
+                  <SofiaAnalisis />
                 </AdminRoute>
               }
             />
