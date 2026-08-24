@@ -74,6 +74,8 @@ export default function Feedback() {
   const [dateFrom, setDateFrom] = useState(initialDates.from);
   const [dateTo, setDateTo] = useState(initialDates.to);
   const [agentSearch, setAgentSearch] = useState('');
+  const [minScore, setMinScore] = useState('');
+  const [maxScore, setMaxScore] = useState('');
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -97,14 +99,20 @@ export default function Feedback() {
 
   useEffect(() => { load(); }, [load]);
 
+  const filteredItems = items.filter((item) => {
+    if (minScore !== '' && (item.score == null || item.score < Number(minScore))) return false;
+    if (maxScore !== '' && (item.score == null || item.score > Number(maxScore))) return false;
+    return true;
+  });
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Feedback</h1>
         <p className="text-sm text-slate-500 mt-1">
           {isGestor
-            ? `Historial de feedback entregado por todos los coordinadores — ${items.length} en el rango seleccionado`
-            : `Feedback que has entregado a tus agentes — ${items.length} en el rango seleccionado`}
+            ? `Historial de feedback entregado por todos los coordinadores — ${filteredItems.length} en el rango seleccionado`
+            : `Feedback que has entregado a tus agentes — ${filteredItems.length} en el rango seleccionado`}
         </p>
       </div>
 
@@ -129,6 +137,28 @@ export default function Feedback() {
             placeholder="Buscar por agente..."
             className="flex-1 min-w-[160px] rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all"
           />
+          <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+            <span className="text-xs text-slate-400 whitespace-nowrap">Puntaje</span>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              value={minScore}
+              onChange={(e) => setMinScore(e.target.value)}
+              placeholder="mín"
+              className="w-16 bg-transparent text-sm text-slate-800 placeholder-slate-400 focus:outline-none"
+            />
+            <span className="text-slate-300">–</span>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              value={maxScore}
+              onChange={(e) => setMaxScore(e.target.value)}
+              placeholder="máx"
+              className="w-16 bg-transparent text-sm text-slate-800 placeholder-slate-400 focus:outline-none"
+            />
+          </div>
         </div>
       </div>
 
@@ -154,14 +184,14 @@ export default function Feedback() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {items.length === 0 && (
+              {filteredItems.length === 0 && (
                 <tr>
                   <td colSpan={isGestor ? 6 : 5} className="px-4 py-10 text-center text-slate-400">
                     No hay feedback entregado en el rango seleccionado.
                   </td>
                 </tr>
               )}
-              {items.map((item) => (
+              {filteredItems.map((item) => (
                 <tr
                   key={item.id}
                   onClick={() => setSelected(item)}
