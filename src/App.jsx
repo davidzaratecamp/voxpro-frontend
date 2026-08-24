@@ -73,7 +73,7 @@ export default function App() {
             <Route
               path="/sofia-ia"
               element={
-                <AdminRoute role={['supervisor_calidad', 'gestor_usuarios']}>
+                <AdminRoute role={['supervisor_calidad', 'gestor_usuarios', 'auditor_ia']}>
                   <SofiaHumanAuditorias />
                 </AdminRoute>
               }
@@ -81,7 +81,7 @@ export default function App() {
             <Route
               path="/sofia-ia/:id"
               element={
-                <AdminRoute role={['supervisor_calidad', 'gestor_usuarios']}>
+                <AdminRoute role={['supervisor_calidad', 'gestor_usuarios', 'auditor_ia']}>
                   <SofiaHumanDetail />
                 </AdminRoute>
               }
@@ -89,7 +89,7 @@ export default function App() {
             <Route
               path="/sofia-ia/analisis"
               element={
-                <AdminRoute role={['supervisor_calidad', 'gestor_usuarios']}>
+                <AdminRoute role={['supervisor_calidad', 'gestor_usuarios', 'auditor_ia']}>
                   <SofiaAnalisis />
                 </AdminRoute>
               }

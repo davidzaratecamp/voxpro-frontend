@@ -145,7 +145,7 @@ export default function Layout() {
       ),
     }] : []),
     ...(user?.role === 'gestor_usuarios' ||
-      (user?.role === 'supervisor_calidad' && (user?.client_codes?.includes('claro_hogar') || user?.client_codes?.includes('claro_tyt')))
+      (['supervisor_calidad', 'auditor_ia'].includes(user?.role) && (user?.client_codes?.includes('claro_hogar') || user?.client_codes?.includes('claro_tyt')))
       ? [{
       label: 'Sofia IA',
       to: '/sofia-ia',
