@@ -26,6 +26,7 @@ import DailyAnalysis from './pages/DailyAnalysis';
 import SofiaHumanAuditorias from './pages/SofiaHumanAuditorias';
 import SofiaHumanDetail from './pages/SofiaHumanDetail';
 import SofiaAnalisis from './pages/SofiaAnalisis';
+import Feedback from './pages/Feedback';
 
 function Home() {
   const { user } = useAuth();
@@ -60,6 +61,14 @@ export default function App() {
               element={
                 <AdminRoute role={['auditor_ia', 'gestor_usuarios']}>
                   <IAAnalisis />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/ia/feedback"
+              element={
+                <AdminRoute role={['auditor_ia', 'gestor_usuarios']}>
+                  <Feedback />
                 </AdminRoute>
               }
             />
