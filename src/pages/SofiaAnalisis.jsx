@@ -38,7 +38,16 @@ ChartJS.register(
 const CLIENT_CODES = ['claro_hogar', 'claro_tyt'];
 const CHART_FONT = { family: 'Inter, ui-sans-serif, system-ui, sans-serif', size: 12 };
 const BASE_TOOLTIP = { backgroundColor: '#1e293b', titleColor: '#f8fafc', bodyColor: '#cbd5e1', padding: 10, cornerRadius: 6 };
-const DIST_COLORS = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#94a3b8', '#f97316', '#6366f1'];
+// Colores por significado (no por posición) — mismo criterio que ya usa
+// AuditDetail.jsx para digitación: UP=verde (venta), UN=rojo (contacto sin
+// venta), Manifiesta Interés=azul (a medias), el resto (sin contacto real)
+// en gris.
+const OUTCOME_COLOR_MAP = {
+  'UTIL POSITIVO': '#10b981',
+  'UTIL NEGATIVO': '#ef4444',
+  'MANIFIESTA INTERES': '#3b82f6',
+};
+const FALLBACK_COLORS = ['#94a3b8', '#cbd5e1', '#64748b', '#a3a3a3', '#78716c', '#57534e'];
 
 function resolveUserClientCodes(user) {
   if (user?.role === 'gestor_usuarios') return CLIENT_CODES;
@@ -104,11 +113,14 @@ const DOUGHNUT_OPTIONS = {
 };
 
 function buildDistribucionData(distribucion) {
+  let fallbackIdx = 0;
   return {
     labels: distribucion.map((d) => d.nomenclatura_nombre),
     datasets: [{
       data: distribucion.map((d) => d.total),
-      backgroundColor: distribucion.map((_, i) => DIST_COLORS[i % DIST_COLORS.length]),
+      backgroundColor: distribucion.map((d) =>
+        OUTCOME_COLOR_MAP[d.nomenclatura_nombre] || FALLBACK_COLORS[fallbackIdx++ % FALLBACK_COLORS.length]
+      ),
       borderWidth: 0,
     }],
   };
