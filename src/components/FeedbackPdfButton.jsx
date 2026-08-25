@@ -28,21 +28,32 @@ export default function FeedbackPdfButton({ continuation, botCallId, onDelivered
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-      // Una sola página siempre — se escala el contenido para que quepa
-      // completo (ancho y alto), en vez de cortarlo en varias páginas.
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       const margin = 10;
-      const availWidth = pageWidth - margin * 2;
-      const availHeight = pageHeight - margin * 2;
+      const contentWidth = pageWidth - margin * 2;
       const imgWidth = canvas.width;
       const imgHeight = canvas.height;
-      const ratio = Math.min(availWidth / imgWidth, availHeight / imgHeight);
-      const renderWidth = imgWidth * ratio;
-      const renderHeight = imgHeight * ratio;
-      const x = margin + (availWidth - renderWidth) / 2;
+      const ratio = contentWidth / imgWidth;
+      const scaledHeight = imgHeight * ratio;
 
-      pdf.addImage(imgData, 'PNG', x, margin, renderWidth, renderHeight);
+      let remaining = scaledHeight;
+      while (remaining > 0) {
+        const sliceHeight = Math.min(remaining, pageHeight - margin * 2);
+        const srcY = (scaledHeight - remaining) / ratio;
+
+        const sliceCanvas = document.createElement('canvas');
+        sliceCanvas.width = imgWidth;
+        sliceCanvas.height = sliceHeight / ratio;
+        const ctx = sliceCanvas.getContext('2d');
+        ctx.drawImage(canvas, 0, srcY, imgWidth, sliceHeight / ratio, 0, 0, imgWidth, sliceHeight / ratio);
+
+        const sliceData = sliceCanvas.toDataURL('image/png');
+        if (remaining < scaledHeight) pdf.addPage();
+        pdf.addImage(sliceData, 'PNG', margin, margin, contentWidth, sliceHeight);
+
+        remaining -= sliceHeight;
+      }
 
       const agentSlug = (continuation.agente_nombre || continuation.agente_id || 'agente').replace(/[^a-zA-Z0-9]+/g, '_');
       pdf.save(`Feedback_${agentSlug}_${continuation.fecha}.pdf`);
