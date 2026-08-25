@@ -133,9 +133,7 @@ export default function Layout() {
         </svg>
       ),
     }] : []),
-    ...(user?.role === 'gestor_usuarios' ||
-      (user?.role === 'supervisor_calidad' && (user?.client_codes?.includes('claro_hogar') || user?.client_codes?.includes('claro_tyt')))
-      ? [{
+    ...(user?.role === 'gestor_usuarios' ? [{
       label: 'Sofia IA',
       to: '/sofia-ia',
       active: pathname === '/sofia-ia' || (pathname.startsWith('/sofia-ia/') && pathname !== '/sofia-ia/analisis' && !pathname.startsWith('/sofia-ia/analisis')),
@@ -146,7 +144,7 @@ export default function Layout() {
       ),
     }] : []),
     ...(user?.role === 'gestor_usuarios' ||
-      (['supervisor_calidad', 'auditor_ia'].includes(user?.role) && (user?.client_codes?.includes('claro_hogar') || user?.client_codes?.includes('claro_tyt')))
+      (user?.role === 'auditor_ia' && (user?.client_codes?.includes('claro_hogar') || user?.client_codes?.includes('claro_tyt')))
       ? [{
       label: 'Continuidad',
       to: '/sofia-ia/analisis',
