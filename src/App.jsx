@@ -27,6 +27,7 @@ import SofiaHumanAuditorias from './pages/SofiaHumanAuditorias';
 import SofiaHumanDetail from './pages/SofiaHumanDetail';
 import SofiaAnalisis from './pages/SofiaAnalisis';
 import Feedback from './pages/Feedback';
+import Santiago from './pages/Santiago';
 
 function Home() {
   const { user } = useAuth();
@@ -111,6 +112,14 @@ export default function App() {
             <Route path="/realtime" element={<RealtimeMonitor />} />
             <Route path="/daily-analysis" element={<DailyAnalysis />} />
             <Route path="/hc" element={<HC />} />
+            <Route
+              path="/santiago"
+              element={
+                <AdminRoute role={['supervisor_calidad']}>
+                  <Santiago />
+                </AdminRoute>
+              }
+            />
             <Route
               path="/configuracion"
               element={
