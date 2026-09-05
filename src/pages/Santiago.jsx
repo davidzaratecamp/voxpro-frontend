@@ -48,11 +48,20 @@ export default function Santiago() {
   const [uploadMsg, setUploadMsg] = useState('');
   const [detail, setDetail] = useState(null);
   const [exporting, setExporting] = useState(false);
+  const [inProgress, setInProgress] = useState([]);
   const fileInputRef = useRef(null);
   const pageSize = 50;
 
   const fetchSummary = useCallback(() => {
     santiApi.getSummary().then((res) => setSummary(res.data.data)).catch(() => {});
+  }, []);
+
+  // Filas con status "matched" = ya se encontraron en Aware y están siendo
+  // descargadas/calificadas por la IA en este momento (hasta 5 a la vez).
+  const fetchInProgress = useCallback(() => {
+    santiApi.list({ status: 'matched', page: 1 })
+      .then((res) => setInProgress(res.data.data))
+      .catch(() => {});
   }, []);
 
   const fetchList = useCallback(() => {
@@ -69,14 +78,15 @@ export default function Santiago() {
 
   useEffect(() => { fetchSummary(); }, [fetchSummary]);
   useEffect(() => { fetchList(); }, [fetchList]);
+  useEffect(() => { fetchInProgress(); }, [fetchInProgress]);
 
   // Mientras haya filas pendientes/en auditoría, refresca solo cada 15s
   // (el lote real lo procesa el cron del backend, esto solo refleja avance).
   useEffect(() => {
     if (!summary || (summary.pending === 0 && summary.matched === 0)) return;
-    const t = setInterval(() => { fetchSummary(); fetchList(); }, 15000);
+    const t = setInterval(() => { fetchSummary(); fetchList(); fetchInProgress(); }, 15000);
     return () => clearInterval(t);
-  }, [summary, fetchSummary, fetchList]);
+  }, [summary, fetchSummary, fetchList, fetchInProgress]);
 
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -101,7 +111,7 @@ export default function Santiago() {
     try {
       await santiApi.processBatch();
       setUploadMsg('Se disparó el procesamiento de un lote — la lista se actualiza sola cada 15s.');
-      setTimeout(() => { fetchSummary(); fetchList(); }, 3000);
+      setTimeout(() => { fetchSummary(); fetchList(); fetchInProgress(); }, 3000);
     } catch (err) {
       setUploadMsg('Error al iniciar el procesamiento: ' + (err.response?.data?.message || err.message));
     }
@@ -194,6 +204,22 @@ export default function Santiago() {
       {uploadMsg && (
         <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-2 text-sm text-blue-700">
           {uploadMsg}
+        </div>
+      )}
+
+      {inProgress.length > 0 && (
+        <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-700">
+          <div className="flex items-center gap-2 font-medium mb-1">
+            <span className="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+            Auditando ahora ({inProgress.length}):
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {inProgress.map((r) => (
+              <span key={r.id} className="inline-flex items-center rounded-full bg-white border border-blue-200 px-2.5 py-0.5 text-xs">
+                {r.phone}{r.agent_name ? ` · ${r.agent_name}` : ''}
+              </span>
+            ))}
+          </div>
         </div>
       )}
 
