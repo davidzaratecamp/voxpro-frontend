@@ -115,7 +115,7 @@ export default function App() {
             <Route
               path="/santiago"
               element={
-                <AdminRoute role={['supervisor_calidad']}>
+                <AdminRoute role={['supervisor_calidad']} clientCode="claro_hogar">
                   <Santiago />
                 </AdminRoute>
               }

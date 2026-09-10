@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useBrand } from '../lib/brand';
 
 const GROUPS = [
-  { key: 'claro',         label: 'Claro',         campaigns: ['claro_wcb', 'claro_movil', 'claro_pymes', 'claro_hogar', 'claro_tyt'] },
+  { key: 'claro',         label: 'Claro',         campaigns: ['claro_wcb', 'claro_movil', 'claro_pymes', 'claro_hogar', 'claro_tyt_inbound', 'claro_tyt_outbound'] },
   { key: 'obama',         label: 'Obama',         campaigns: ['obama_ventas', 'obama_customer'] },
   { key: 'lv',           label: 'Vital',          campaigns: ['lv_ventas', 'lv_customer'] },
   { key: 'reclutamiento', label: 'Reclutamiento', campaigns: ['reclutamiento'] },
@@ -15,8 +15,9 @@ const CAMPAIGN_CLIENT = {
   claro_wcb:      'claro_wcb',
   claro_movil:    'claro_wcb',
   claro_pymes:    'claro_wcb',
-  claro_hogar:    'claro_hogar',
-  claro_tyt:      'claro_tyt',
+  claro_hogar:        'claro_hogar',
+  claro_tyt_inbound:  'claro_tyt',
+  claro_tyt_outbound: 'claro_tyt',
   obama_ventas:   'obama',
   obama_customer: 'obama',
   lv_ventas:      'lv',

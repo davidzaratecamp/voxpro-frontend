@@ -112,7 +112,7 @@ export default function Layout() {
         </svg>
       ),
     }] : []),
-    ...(user?.role === 'supervisor_calidad' ? [{
+    ...(user?.role === 'supervisor_calidad' && user?.client_codes?.includes('claro_hogar') ? [{
       label: 'Santiago',
       to: '/santiago',
       active: pathname === '/santiago',
