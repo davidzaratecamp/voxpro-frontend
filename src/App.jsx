@@ -28,10 +28,13 @@ import SofiaHumanDetail from './pages/SofiaHumanDetail';
 import SofiaAnalisis from './pages/SofiaAnalisis';
 import Feedback from './pages/Feedback';
 import Santiago from './pages/Santiago';
+import ObamaVitalAuditorias from './pages/ObamaVitalAuditorias';
+import ObamaVitalDetail from './pages/ObamaVitalDetail';
 
 function Home() {
   const { user } = useAuth();
   if (user?.role === 'auditor_ia') return <Navigate to="/ia/auditorias" replace />;
+  if (user?.role === 'auditor_obama_vital') return <Navigate to="/obama-vital" replace />;
   return <Dashboard />;
 }
 
@@ -121,9 +124,25 @@ export default function App() {
               }
             />
             <Route
+              path="/obama-vital"
+              element={
+                <AdminRoute role={['auditor_obama_vital', 'gestor_usuarios']}>
+                  <ObamaVitalAuditorias />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/obama-vital/:id"
+              element={
+                <AdminRoute role={['auditor_obama_vital', 'gestor_usuarios']}>
+                  <ObamaVitalDetail />
+                </AdminRoute>
+              }
+            />
+            <Route
               path="/configuracion"
               element={
-                <AdminRoute role={['supervisor_calidad', 'viewer_zoom']}>
+                <AdminRoute role={['supervisor_calidad', 'viewer_zoom', 'auditor_obama_vital']}>
                   <Configuracion />
                 </AdminRoute>
               }

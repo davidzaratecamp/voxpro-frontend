@@ -46,6 +46,7 @@ export function getMonday(dateStr) {
 export const CLIENT_LABELS = {
   obama: 'Obama',
   lv: 'Vital Health',
+  obama_vital: 'Obama Vital',
   claro_tyt: 'Claro TYT',
   claro_hogar: 'Claro Hogar',
   claro_wcb: 'Claro WCB',

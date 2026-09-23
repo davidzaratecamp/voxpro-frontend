@@ -8,6 +8,7 @@ const ROLES = [
   { value: 'supervisor_calidad', label: 'Supervisor Calidad' },
   { value: 'gestor_usuarios',    label: 'Gestor Usuarios' },
   { value: 'auditor_ia',         label: 'Auditor IA' },
+  { value: 'auditor_obama_vital', label: 'Auditor Obama Vital' },
 ];
 
 const CLIENT_CODES = [
@@ -16,6 +17,7 @@ const CLIENT_CODES = [
   { value: 'claro_hogar',label: 'Claro Hogar' },
   { value: 'claro_tyt',  label: 'Claro TyT' },
   { value: 'lv',         label: 'Vital' },
+  { value: 'obama_vital', label: 'Obama Vital' },
 ];
 
 const ROLE_LABELS = Object.fromEntries(ROLES.map((r) => [r.value, r.label]));
@@ -26,6 +28,7 @@ const ROLE_COLORS = {
   supervisor_calidad: 'bg-indigo-100 text-indigo-700',
   gestor_usuarios:    'bg-pink-100 text-pink-700',
   auditor_ia:         'bg-cyan-100 text-cyan-700',
+  auditor_obama_vital: 'bg-teal-100 text-teal-700',
 };
 
 const EMPTY_FORM = {
