@@ -127,10 +127,10 @@ function SeleccionarTab() {
   }, [fetchCalls]);
 
   const handleAuditar = async (call) => {
-    setSelectingId(call.registro_llamada_id);
+    setSelectingId(call.uniqueid);
     setError('');
     try {
-      const res = await obamaVitalApi.selectOne(call.registro_llamada_id);
+      const res = await obamaVitalApi.selectOne(call.uniqueid);
       navigate(`/obama-vital/${res.data.data.id}`);
     } catch (err) {
       setError(err.response?.data?.message || 'Error al seleccionar la llamada');
@@ -182,9 +182,19 @@ function SeleccionarTab() {
             {filteredCalls?.map((call) => {
               const done = call.audit_status === 'completed';
               return (
-                <tr key={call.registro_llamada_id} className={done ? 'bg-emerald-50' : ''}>
+                <tr key={call.uniqueid} className={done ? 'bg-emerald-50' : ''}>
                   <AgentCell nombre={call.agente_nombre} cedula={call.agente_id} />
-                  <td className="py-2 pr-4 text-slate-600 text-xs">{call.proyecto_nombre}</td>
+                  <td className="py-2 pr-4 text-slate-600 text-xs">
+                    {call.proyecto_nombre}
+                    {!call.registrada && (
+                      <span
+                        className="block text-[11px] text-amber-600"
+                        title="Intento de llamada que Aware no dejó en su registro de gestión (solo queda en la central)"
+                      >
+                        No registrada en Aware
+                      </span>
+                    )}
+                  </td>
                   <td className="py-2 pr-4 text-slate-600">{call.telefono || '—'}</td>
                   <td className="py-2 pr-4 text-slate-500 text-xs">{call.hora || '—'}</td>
                   <td className="py-2 pr-4 font-medium text-slate-800">{formatDuration(call.duracion)}</td>
@@ -199,10 +209,10 @@ function SeleccionarTab() {
                     ) : (
                       <button
                         onClick={() => handleAuditar(call)}
-                        disabled={selectingId === call.registro_llamada_id}
+                        disabled={selectingId === call.uniqueid}
                         className="inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
                       >
-                        {selectingId === call.registro_llamada_id ? 'Abriendo...' : 'Auditar'}
+                        {selectingId === call.uniqueid ? 'Abriendo...' : 'Auditar'}
                       </button>
                     )}
                   </td>

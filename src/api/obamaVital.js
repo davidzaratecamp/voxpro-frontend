@@ -2,7 +2,7 @@ import client from './client';
 
 export const obamaVitalApi = {
   getCallsForDay: (params) => client.get('/obama-vital/calls', { params }),
-  selectOne: (registro_llamada_id) => client.post('/obama-vital/select', { registro_llamada_id }),
+  selectOne: (uniqueid) => client.post('/obama-vital/select', { uniqueid }),
   listAudits: (params) => client.get('/obama-vital/audits', { params }),
   getSummary: (params) => client.get('/obama-vital/summary', { params }),
 
