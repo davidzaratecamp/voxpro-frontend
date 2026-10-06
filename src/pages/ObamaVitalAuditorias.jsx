@@ -184,17 +184,7 @@ function SeleccionarTab() {
               return (
                 <tr key={call.uniqueid} className={done ? 'bg-emerald-50' : ''}>
                   <AgentCell nombre={call.agente_nombre} cedula={call.agente_id} />
-                  <td className="py-2 pr-4 text-slate-600 text-xs">
-                    {call.proyecto_nombre}
-                    {!call.registrada && (
-                      <span
-                        className="block text-[11px] text-amber-600"
-                        title="Intento de llamada que Aware no dejó en su registro de gestión (solo queda en la central)"
-                      >
-                        No registrada en Aware
-                      </span>
-                    )}
-                  </td>
+                  <td className="py-2 pr-4 text-slate-600 text-xs">{call.proyecto_nombre}</td>
                   <td className="py-2 pr-4 text-slate-600">{call.telefono || '—'}</td>
                   <td className="py-2 pr-4 text-slate-500 text-xs">{call.hora || '—'}</td>
                   <td className="py-2 pr-4 font-medium text-slate-800">{formatDuration(call.duracion)}</td>
