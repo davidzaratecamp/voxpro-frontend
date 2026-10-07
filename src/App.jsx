@@ -30,6 +30,7 @@ import Feedback from './pages/Feedback';
 import Santiago from './pages/Santiago';
 import ObamaVitalAuditorias from './pages/ObamaVitalAuditorias';
 import ObamaVitalDetail from './pages/ObamaVitalDetail';
+import IAConsumo from './pages/IAConsumo';
 
 function Home() {
   const { user } = useAuth();
@@ -144,6 +145,14 @@ export default function App() {
               element={
                 <AdminRoute role={['supervisor_calidad', 'viewer_zoom', 'auditor_obama_vital']}>
                   <Configuracion />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/ia-consumo"
+              element={
+                <AdminRoute role="gestor_usuarios">
+                  <IAConsumo />
                 </AdminRoute>
               }
             />
