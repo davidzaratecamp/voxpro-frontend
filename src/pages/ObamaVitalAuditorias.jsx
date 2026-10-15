@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { obamaVitalApi, OBAMA_VITAL_CAMPAIGNS, OBAMA_VITAL_STATUS, FUENTES } from '../api/obamaVital';
 import { formatDuration, formatDate } from '../lib/utils';
+import { exportarHistorialAsiste } from '../lib/asisteExcel';
 
 const INPUT = 'rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500';
 
@@ -254,26 +255,55 @@ function HistorialTab() {
   const [phoneSearch, setPhoneSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [fuente, setFuente] = useState('');
   const [rows, setRows] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [exporting, setExporting] = useState(false);
+
+  const params = useMemo(() => {
+    const p = {};
+    if (campaign) p.campaign = campaign;
+    if (status) p.status = status;
+    if (fuente) p.source = fuente;
+    if (agentSearch) p.agente = agentSearch;
+    if (phoneSearch) p.telefono = phoneSearch;
+    if (dateFrom) p.date_from = dateFrom;
+    if (dateTo) p.date_to = dateTo;
+    return p;
+  }, [campaign, status, fuente, agentSearch, phoneSearch, dateFrom, dateTo]);
 
   const fetchRows = useCallback(() => {
     setLoading(true);
     setError('');
-    const params = {};
-    if (campaign) params.campaign = campaign;
-    if (status) params.status = status;
-    if (agentSearch) params.agente = agentSearch;
-    if (phoneSearch) params.telefono = phoneSearch;
-    if (dateFrom) params.date_from = dateFrom;
-    if (dateTo) params.date_to = dateTo;
     obamaVitalApi
       .listAudits(params)
       .then((res) => setRows(res.data.data))
       .catch((err) => setError(err.response?.data?.message || 'Error al cargar el historial'))
       .finally(() => setLoading(false));
-  }, [campaign, status, agentSearch, phoneSearch, dateFrom, dateTo]);
+  }, [params]);
+
+  // Exporta exactamente lo filtrado (con criterios y observaciones, sin transcripción).
+  const handleExport = async () => {
+    setExporting(true);
+    setError('');
+    try {
+      const res = await obamaVitalApi.exportAudits(params);
+      const partes = [
+        dateFrom || dateTo ? `Fechas: ${dateFrom ? formatDate(dateFrom) : 'inicio'} a ${dateTo ? formatDate(dateTo) : 'hoy'}` : 'Todas las fechas',
+        campaign && `Campaña: ${OBAMA_VITAL_CAMPAIGNS.find((c) => c.value === campaign)?.label}`,
+        fuente && `Fuente: ${FUENTES.find((f) => f.value === fuente)?.label}`,
+        status && `Estado: ${OBAMA_VITAL_STATUS[status]?.label}`,
+        agentSearch && `Agente: ${agentSearch}`,
+        phoneSearch && `Teléfono: ${phoneSearch}`,
+      ].filter(Boolean);
+      await exportarHistorialAsiste(res.data.data, partes.join(' · '));
+    } catch (err) {
+      setError(err.response?.data?.message || 'No se pudo exportar el Excel');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     const t = setTimeout(fetchRows, 300);
@@ -299,12 +329,28 @@ function HistorialTab() {
           <Field label="Campaña">
             <CampaignSelect value={campaign} onChange={setCampaign} />
           </Field>
+          <Field label="Fuente">
+            <FuenteSelect value={fuente} onChange={setFuente} />
+          </Field>
           <Field label="Desde">
             <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className={INPUT} />
           </Field>
           <Field label="Hasta">
             <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className={INPUT} />
           </Field>
+          <div className="ml-auto flex items-end gap-3">
+            {rows && !loading && <p className="text-xs text-slate-400 pb-2">{rows.length} auditorías</p>}
+            <button
+              onClick={handleExport}
+              disabled={exporting || loading || !rows?.length}
+              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.8" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+              </svg>
+              {exporting ? 'Exportando...' : 'Exportar Excel'}
+            </button>
+          </div>
         </div>
       </div>
 

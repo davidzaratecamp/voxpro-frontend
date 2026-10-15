@@ -4,6 +4,7 @@ export const obamaVitalApi = {
   getCallsForDay: (params) => client.get('/obama-vital/calls', { params }),
   selectOne: (uniqueid, fecha) => client.post('/obama-vital/select', { uniqueid, fecha }),
   listAudits: (params) => client.get('/obama-vital/audits', { params }),
+  exportAudits: (params) => client.get('/obama-vital/audits/export', { params, timeout: 120000 }),
   getSummary: (params) => client.get('/obama-vital/summary', { params }),
 
   getAudit: (id) => client.get(`/obama-vital/audits/${id}`),
