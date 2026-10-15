@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { obamaVitalApi, OBAMA_VITAL_CAMPAIGNS, OBAMA_VITAL_STATUS } from '../api/obamaVital';
+import { obamaVitalApi, OBAMA_VITAL_CAMPAIGNS, OBAMA_VITAL_STATUS, FUENTES } from '../api/obamaVital';
 import { formatDuration, formatDate } from '../lib/utils';
 
 const INPUT = 'rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500';
@@ -57,6 +57,24 @@ function Card({ loading, error, empty, emptyText, children }) {
   );
 }
 
+function FuenteBadge({ fuente }) {
+  const zoom = fuente === 'zoom';
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${zoom ? 'bg-sky-50 text-sky-700' : 'bg-slate-100 text-slate-600'}`}>
+      {zoom ? 'Zoom' : 'Aware'}
+    </span>
+  );
+}
+
+function FuenteSelect({ value, onChange }) {
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} className={INPUT}>
+      <option value="">Todas</option>
+      {FUENTES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+    </select>
+  );
+}
+
 function AgentCell({ nombre, cedula }) {
   return (
     <td className="py-2 pr-4">
@@ -74,7 +92,7 @@ export default function ObamaVitalAuditorias() {
       <div>
         <h2 className="text-xl font-semibold text-slate-800">Obama Vital</h2>
         <p className="text-sm text-slate-500 mt-1">
-          Llamadas de Bienvenida (outbound) y ObamaCus (inbound). Selecciona una llamada, precalifícala con IA y confirma o corrige la calificación.
+          Llamadas de Bienvenida (outbound) y ObamaCus (inbound), por Aware y por Zoom. Selecciona una llamada, precalifícala con IA y confirma o corrige la calificación.
         </p>
       </div>
 
@@ -107,6 +125,8 @@ function SeleccionarTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectingId, setSelectingId] = useState(null);
+  const [fuente, setFuente] = useState('');
+  const [zoomError, setZoomError] = useState('');
 
   const fetchCalls = useCallback(() => {
     setLoading(true);
@@ -116,7 +136,7 @@ function SeleccionarTab() {
     if (phoneSearch) params.telefono = phoneSearch;
     obamaVitalApi
       .getCallsForDay(params)
-      .then((res) => setCalls(res.data.data))
+      .then((res) => { setCalls(res.data.data); setZoomError(res.data.zoom_error || ''); })
       .catch((err) => setError(err.response?.data?.message || 'Error al cargar las llamadas'))
       .finally(() => setLoading(false));
   }, [date, campaign, phoneSearch]);
@@ -130,7 +150,7 @@ function SeleccionarTab() {
     setSelectingId(call.uniqueid);
     setError('');
     try {
-      const res = await obamaVitalApi.selectOne(call.uniqueid);
+      const res = await obamaVitalApi.selectOne(call.uniqueid, call.fecha);
       navigate(`/obama-vital/${res.data.data.id}`);
     } catch (err) {
       setError(err.response?.data?.message || 'Error al seleccionar la llamada');
@@ -139,6 +159,7 @@ function SeleccionarTab() {
   };
 
   const filteredCalls = calls?.filter((c) => {
+    if (fuente && c.fuente !== fuente) return false;
     if (!agentSearch) return true;
     const needle = agentSearch.toLowerCase();
     return (c.agente_nombre || '').toLowerCase().includes(needle) || (c.agente_id || '').includes(agentSearch);
@@ -154,6 +175,9 @@ function SeleccionarTab() {
           <Field label="Campaña">
             <CampaignSelect value={campaign} onChange={setCampaign} />
           </Field>
+          <Field label="Fuente">
+            <FuenteSelect value={fuente} onChange={setFuente} />
+          </Field>
           <Field label="Agente">
             <input type="text" value={agentSearch} onChange={(e) => setAgentSearch(e.target.value)} placeholder="Nombre o cédula..." className={INPUT} />
           </Field>
@@ -166,12 +190,17 @@ function SeleccionarTab() {
         </div>
       </div>
 
+      {zoomError && !loading && (
+        <div className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">{zoomError}</div>
+      )}
+
       <Card loading={loading} error={error} empty={!filteredCalls?.length} emptyText="No hay llamadas con grabación para ese filtro.">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-xs font-medium text-slate-500 uppercase tracking-wide border-b border-slate-100">
               <th className="py-2 text-left pr-4">Agente</th>
               <th className="py-2 text-left pr-4">Campaña</th>
+              <th className="py-2 text-left pr-4">Fuente</th>
               <th className="py-2 text-left pr-4">Teléfono</th>
               <th className="py-2 text-left pr-4">Hora</th>
               <th className="py-2 text-left pr-4">Duración</th>
@@ -185,6 +214,7 @@ function SeleccionarTab() {
                 <tr key={call.uniqueid} className={done ? 'bg-emerald-50' : ''}>
                   <AgentCell nombre={call.agente_nombre} cedula={call.agente_id} />
                   <td className="py-2 pr-4 text-slate-600 text-xs">{call.proyecto_nombre}</td>
+                  <td className="py-2 pr-4"><FuenteBadge fuente={call.fuente} /></td>
                   <td className="py-2 pr-4 text-slate-600">{call.telefono || '—'}</td>
                   <td className="py-2 pr-4 text-slate-500 text-xs">{call.hora || '—'}</td>
                   <td className="py-2 pr-4 font-medium text-slate-800">{formatDuration(call.duracion)}</td>
@@ -284,6 +314,7 @@ function HistorialTab() {
             <tr className="text-xs font-medium text-slate-500 uppercase tracking-wide border-b border-slate-100">
               <th className="py-2 text-left pr-4">Agente</th>
               <th className="py-2 text-left pr-4">Campaña</th>
+              <th className="py-2 text-left pr-4">Fuente</th>
               <th className="py-2 text-left pr-4">Fecha</th>
               <th className="py-2 text-left pr-4">Estado</th>
               <th className="py-2 text-left pr-4">Puntaje</th>
@@ -297,6 +328,7 @@ function HistorialTab() {
               <tr key={row.id}>
                 <AgentCell nombre={row.agente_nombre} cedula={row.agente_id} />
                 <td className="py-2 pr-4 text-slate-600 text-xs">{row.proyecto_nombre}</td>
+                <td className="py-2 pr-4"><FuenteBadge fuente={row.source} /></td>
                 <td className="py-2 pr-4 text-slate-500 text-xs whitespace-nowrap">{formatDate(row.fecha)} {row.hora?.slice(0, 5)}</td>
                 <td className="py-2 pr-4">
                   <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${OBAMA_VITAL_STATUS[row.status]?.style}`}>

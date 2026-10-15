@@ -2,7 +2,7 @@ import client from './client';
 
 export const obamaVitalApi = {
   getCallsForDay: (params) => client.get('/obama-vital/calls', { params }),
-  selectOne: (uniqueid) => client.post('/obama-vital/select', { uniqueid }),
+  selectOne: (uniqueid, fecha) => client.post('/obama-vital/select', { uniqueid, fecha }),
   listAudits: (params) => client.get('/obama-vital/audits', { params }),
   getSummary: (params) => client.get('/obama-vital/summary', { params }),
 
@@ -26,3 +26,8 @@ export const OBAMA_VITAL_STATUS = {
   completed: { label: 'Completada',  style: 'bg-emerald-50 text-emerald-700' },
   skipped:   { label: 'Omitida',     style: 'bg-slate-100 text-slate-500' },
 };
+
+export const FUENTES = [
+  { value: 'aware', label: 'Aware' },
+  { value: 'zoom',  label: 'Zoom' },
+];

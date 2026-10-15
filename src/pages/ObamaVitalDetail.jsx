@@ -134,6 +134,7 @@ export default function ObamaVitalDetail() {
           <Info label="Agente" value={audit.agente_nombre || audit.agente_id} />
           <Info label="Cédula" value={audit.agente_id} />
           <Info label="Campaña" value={audit.proyecto_nombre} />
+          <Info label="Fuente" value={audit.source === 'zoom' ? 'Zoom' : 'Aware'} />
           <Info label="Teléfono" value={audit.telefono} />
           <Info label="Fecha y hora" value={`${formatDate(audit.fecha)} ${audit.hora?.slice(0, 5) || ''}`} />
           <Info label="Duración" value={formatDuration(audit.duracion)} />
