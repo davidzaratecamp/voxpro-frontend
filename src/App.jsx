@@ -27,6 +27,7 @@ import SofiaHumanAuditorias from './pages/SofiaHumanAuditorias';
 import SofiaHumanDetail from './pages/SofiaHumanDetail';
 import SofiaAnalisis from './pages/SofiaAnalisis';
 import Feedback from './pages/Feedback';
+import CalificacionAgentes from './pages/CalificacionAgentes';
 import Santiago from './pages/Santiago';
 import ObamaVitalAuditorias from './pages/ObamaVitalAuditorias';
 import ObamaVitalDetail from './pages/ObamaVitalDetail';
@@ -74,6 +75,14 @@ export default function App() {
               element={
                 <AdminRoute role={['auditor_ia', 'gestor_usuarios']}>
                   <Feedback />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/ia/calificacion-agentes"
+              element={
+                <AdminRoute role={['auditor_ia', 'gestor_usuarios']}>
+                  <CalificacionAgentes />
                 </AdminRoute>
               }
             />
