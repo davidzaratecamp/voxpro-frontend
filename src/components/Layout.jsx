@@ -198,6 +198,18 @@ export default function Layout() {
         </svg>
       ),
     }] : []),
+    ...(user?.role === 'gestor_usuarios' ||
+      (user?.role === 'auditor_ia' && (user?.client_codes?.includes('claro_hogar') || user?.client_codes?.includes('claro_tyt')))
+      ? [{
+      label: 'Exportar continuidad',
+      to: '/ia/exportar-continuidad',
+      active: pathname === '/ia/exportar-continuidad',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+        </svg>
+      ),
+    }] : []),
     ...(user?.role === 'auditor_ia' || user?.role === 'gestor_usuarios' ? [{
       label: 'Feedback',
       to: '/ia/feedback',

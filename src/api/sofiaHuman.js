@@ -10,6 +10,8 @@ export const sofiaHumanApi = {
   getAgentWeekly: (params) => client.get('/sofia-human/agents-weekly', { params }),
   getAgentWeekAudits: (agenteId, params) => client.get(`/sofia-human/agents-weekly/${encodeURIComponent(agenteId)}/audits`, { params }),
   getContinuation: (id) => client.get(`/sofia-human/continuations/${id}`),
+  countContinuationsExport: (params) => client.get('/sofia-human/continuations-export/count', { params }),
+  exportContinuations: (params) => client.get('/sofia-human/continuations-export', { params, responseType: 'blob', timeout: 600000 }),
   getContinuationAudio: (id) => client.get(`/sofia-human/continuations/${id}/audio`, { responseType: 'blob', timeout: 60000 }),
 
   getSelection: (id) => client.get(`/sofia-human/selections/${id}`),

@@ -28,6 +28,7 @@ import SofiaHumanDetail from './pages/SofiaHumanDetail';
 import SofiaAnalisis from './pages/SofiaAnalisis';
 import Feedback from './pages/Feedback';
 import CalificacionAgentes from './pages/CalificacionAgentes';
+import ExportarContinuidad from './pages/ExportarContinuidad';
 import Santiago from './pages/Santiago';
 import ObamaVitalAuditorias from './pages/ObamaVitalAuditorias';
 import ObamaVitalDetail from './pages/ObamaVitalDetail';
@@ -83,6 +84,14 @@ export default function App() {
               element={
                 <AdminRoute role={['auditor_ia', 'gestor_usuarios']}>
                   <CalificacionAgentes />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/ia/exportar-continuidad"
+              element={
+                <AdminRoute role={['auditor_ia', 'gestor_usuarios']}>
+                  <ExportarContinuidad />
                 </AdminRoute>
               }
             />
