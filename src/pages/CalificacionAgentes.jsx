@@ -115,7 +115,7 @@ function AuditDetail({ auditId }) {
         ) : (
           <audio controls src={audioUrl} className="w-full sm:w-auto sm:flex-1" />
         )}
-        <FeedbackPdfButton continuation={audit} />
+        <FeedbackPdfButton continuation={audit} botCallId={audit.bot_call_id} />
       </div>
       {audioError && <p className="text-xs text-red-500">{audioError}</p>}
       <QualityScoreDisplay

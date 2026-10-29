@@ -17,11 +17,33 @@ function toIso(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function defaultDates() {
+/** Atajos de rango (fechas locales). La semana va de lunes a domingo. */
+function presetRange(key) {
   const today = new Date();
-  const from = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 30);
-  return { from: toIso(from), to: toIso(today) };
+  const y = today.getFullYear();
+  const m = today.getMonth();
+  const d = today.getDate();
+  const monday = new Date(y, m, d - ((today.getDay() + 6) % 7));
+  switch (key) {
+    case 'hoy': return { from: toIso(today), to: toIso(today) };
+    case 'semana': return { from: toIso(monday), to: toIso(today) };
+    case 'semana_pasada': {
+      const start = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() - 7);
+      const end = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() - 1);
+      return { from: toIso(start), to: toIso(end) };
+    }
+    case 'mes': return { from: toIso(new Date(y, m, 1)), to: toIso(today) };
+    default: return { from: toIso(new Date(y, m, d - 29)), to: toIso(today) };
+  }
 }
+
+const PRESETS = [
+  { key: 'hoy', label: 'Hoy' },
+  { key: 'semana', label: 'Esta semana' },
+  { key: 'semana_pasada', label: 'Semana pasada' },
+  { key: 'mes', label: 'Este mes' },
+  { key: '30d', label: 'Últimos 30 días' },
+];
 
 /** 'YYYY-MM-DD HH:MM:SS' → 'DD/MM/YYYY HH:MM' sin pasar por zona horaria. */
 function formatDateTime(value) {
@@ -36,17 +58,41 @@ function allowedClientCodes(user) {
   return CLIENT_CODES.filter((c) => user?.client_codes?.includes(c));
 }
 
+/** Resumen por auditor recalculado sobre las entregas ya filtradas. */
+function summarizeByAuditor(auditores, entregas) {
+  const stats = new Map();
+  for (const r of entregas) {
+    if (!stats.has(r.delivered_by)) stats.set(r.delivered_by, { feedbacks: 0, agentes: new Set(), suma: 0, ultimo: r.delivered_at });
+    const s = stats.get(r.delivered_by);
+    s.feedbacks++;
+    s.agentes.add(r.agente_id);
+    s.suma += Number(r.score) || 0;
+  }
+  return auditores
+    .map((a) => {
+      const s = stats.get(a.auditor_id);
+      return s
+        ? { ...a, feedbacks: s.feedbacks, agentes: s.agentes.size, promedio_puntaje: Math.round((s.suma / s.feedbacks) * 10) / 10, ultimo: s.ultimo }
+        : { ...a, feedbacks: 0, agentes: 0, promedio_puntaje: null, ultimo: null };
+    })
+    .sort((a, b) => b.feedbacks - a.feedbacks || a.auditor_nombre.localeCompare(b.auditor_nombre, 'es'));
+}
+
 export default function SeguimientoFeedback() {
   const { user } = useAuth();
   const campaigns = allowedClientCodes(user);
   const hasCampaigns = campaigns.length > 0;
-  const initial = defaultDates();
+  const initial = presetRange('30d');
 
   const [dateFrom, setDateFrom] = useState(initial.from);
   const [dateTo, setDateTo] = useState(initial.to);
   const [clientCode, setClientCode] = useState('');
-  const [auditorId, setAuditorId] = useState(null);
+  const [auditorId, setAuditorId] = useState('');
   const [agentSearch, setAgentSearch] = useState('');
+  const [minScore, setMinScore] = useState('');
+  const [maxScore, setMaxScore] = useState('');
+  const [onlyHighImpact, setOnlyHighImpact] = useState(false);
+  const [showZero, setShowZero] = useState(true);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -69,19 +115,53 @@ export default function SeguimientoFeedback() {
   }, [dateFrom, dateTo, clientCode, hasCampaigns]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setAuditorId(null); }, [dateFrom, dateTo, clientCode]);
 
-  const selectedAuditor = data?.auditores.find((a) => a.auditor_id === auditorId) || null;
+  const applyPreset = (key) => {
+    const r = presetRange(key);
+    setDateFrom(r.from);
+    setDateTo(r.to);
+  };
+  const activePreset = PRESETS.find((p) => {
+    const r = presetRange(p.key);
+    return r.from === dateFrom && r.to === dateTo;
+  })?.key;
 
-  const detalle = useMemo(() => {
+  const clearFilters = () => {
+    applyPreset('30d');
+    setClientCode('');
+    setAuditorId('');
+    setAgentSearch('');
+    setMinScore('');
+    setMaxScore('');
+    setOnlyHighImpact(false);
+    setShowZero(true);
+  };
+
+  // Entregas que pasan todos los filtros salvo el de auditor (para la tabla por auditor).
+  const entregasSinFiltroAuditor = useMemo(() => {
     const q = agentSearch.trim().toLowerCase();
     return (data?.detalle || []).filter((r) =>
-      (auditorId == null || r.delivered_by === auditorId) &&
-      (!q || (r.agente_nombre || '').toLowerCase().includes(q) || String(r.agente_id || '').includes(q)));
-  }, [data, auditorId, agentSearch]);
+      (!q || (r.agente_nombre || '').toLowerCase().includes(q) || String(r.agente_id || '').includes(q)) &&
+      (minScore === '' || Number(r.score) >= Number(minScore)) &&
+      (maxScore === '' || Number(r.score) <= Number(maxScore)) &&
+      (!onlyHighImpact || r.high_impact_failed));
+  }, [data, agentSearch, minScore, maxScore, onlyHighImpact]);
+
+  const detalle = useMemo(
+    () => entregasSinFiltroAuditor.filter((r) => auditorId === '' || String(r.delivered_by) === auditorId),
+    [entregasSinFiltroAuditor, auditorId],
+  );
+
+  const auditores = useMemo(() => {
+    const list = summarizeByAuditor(data?.auditores || [], entregasSinFiltroAuditor);
+    return showZero ? list : list.filter((a) => a.feedbacks > 0);
+  }, [data, entregasSinFiltroAuditor, showZero]);
+
+  const sinFeedback = auditores.filter((a) => a.feedbacks === 0).length;
+  const selectedAuditor = (data?.auditores || []).find((a) => String(a.auditor_id) === auditorId) || null;
 
   const inputCls = 'rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all';
-  const resumen = data?.resumen;
+  const labelCls = 'block text-xs font-medium text-slate-500 mb-1';
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -93,27 +173,92 @@ export default function SeguimientoFeedback() {
         </p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-        <div className="flex flex-col sm:flex-row flex-wrap gap-3">
-          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className={inputCls} />
-          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className={inputCls} />
-          {campaigns.length > 1 && (
-            <select value={clientCode} onChange={(e) => setClientCode(e.target.value)} className={inputCls}>
-              <option value="">Todas las campañas</option>
-              {campaigns.map((c) => <option key={c} value={c}>{CLIENT_LABELS[c]}</option>)}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 space-y-4">
+        <div className="flex flex-wrap gap-2">
+          {PRESETS.map((p) => (
+            <button
+              key={p.key}
+              onClick={() => applyPreset(p.key)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
+                activePreset === p.key
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-slate-600 border-slate-300 hover:border-blue-400'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div>
+            <label className={labelCls}>Entregado desde</label>
+            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className={`w-full ${inputCls}`} />
+          </div>
+          <div>
+            <label className={labelCls}>Entregado hasta</label>
+            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className={`w-full ${inputCls}`} />
+          </div>
+          <div>
+            <label className={labelCls}>Auditor</label>
+            <select value={auditorId} onChange={(e) => setAuditorId(e.target.value)} className={`w-full ${inputCls}`}>
+              <option value="">Todos los auditores</option>
+              {(data?.auditores || [])
+                .slice()
+                .sort((a, b) => a.auditor_nombre.localeCompare(b.auditor_nombre, 'es'))
+                .map((a) => <option key={a.auditor_id} value={String(a.auditor_id)}>{a.auditor_nombre}</option>)}
             </select>
+          </div>
+          {campaigns.length > 1 ? (
+            <div>
+              <label className={labelCls}>Campaña</label>
+              <select value={clientCode} onChange={(e) => setClientCode(e.target.value)} className={`w-full ${inputCls}`}>
+                <option value="">Todas las campañas</option>
+                {campaigns.map((c) => <option key={c} value={c}>{CLIENT_LABELS[c]}</option>)}
+              </select>
+            </div>
+          ) : (
+            <div>
+              <label className={labelCls}>Campaña</label>
+              <div className={`${inputCls} text-slate-500`}>{CLIENT_LABELS[campaigns[0]] || '—'}</div>
+            </div>
           )}
-          <input
-            type="text"
-            value={agentSearch}
-            onChange={(e) => setAgentSearch(e.target.value)}
-            placeholder="Buscar agente por nombre o cédula..."
-            className={`flex-1 min-w-[180px] placeholder-slate-400 ${inputCls}`}
-          />
+          <div className="sm:col-span-2">
+            <label className={labelCls}>Agente</label>
+            <input
+              type="text"
+              value={agentSearch}
+              onChange={(e) => setAgentSearch(e.target.value)}
+              placeholder="Nombre o cédula del agente..."
+              className={`w-full placeholder-slate-400 ${inputCls}`}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Puntaje</label>
+            <div className="flex items-center gap-2">
+              <input type="number" min="0" max="100" value={minScore} onChange={(e) => setMinScore(e.target.value)} placeholder="mín" className={`w-full ${inputCls}`} />
+              <span className="text-slate-300">–</span>
+              <input type="number" min="0" max="100" value={maxScore} onChange={(e) => setMaxScore(e.target.value)} placeholder="máx" className={`w-full ${inputCls}`} />
+            </div>
+          </div>
+          <div className="flex flex-col justify-end gap-2">
+            <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+              <input type="checkbox" checked={onlyHighImpact} onChange={(e) => setOnlyHighImpact(e.target.checked)} className="w-4 h-4 rounded text-blue-600 border-slate-300" />
+              Solo con falla de alto impacto
+            </label>
+            <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+              <input type="checkbox" checked={showZero} onChange={(e) => setShowZero(e.target.checked)} className="w-4 h-4 rounded text-blue-600 border-slate-300" />
+              Mostrar auditores sin feedback
+            </label>
+          </div>
+        </div>
+
+        <div className="flex justify-end">
+          <button onClick={clearFilters} className="text-xs text-blue-600 hover:text-blue-800">Limpiar filtros</button>
         </div>
       </div>
 
-      {!campaigns.length && (
+      {!hasCampaigns && (
         <div className="rounded-lg bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 text-sm">
           Tu usuario no tiene asignada ninguna campaña de Claro.
         </div>
@@ -123,16 +268,17 @@ export default function SeguimientoFeedback() {
         <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">{error}</div>
       )}
 
-      {resumen && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {data && !loading && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Feedbacks entregados', value: resumen.feedbacks.toLocaleString('es-CO') },
-            { label: 'Auditores que entregaron', value: resumen.auditores },
-            { label: 'Agentes con feedback', value: resumen.agentes },
+            { label: 'Feedbacks entregados', value: detalle.length.toLocaleString('es-CO') },
+            { label: 'Auditores que entregaron', value: auditores.filter((a) => a.feedbacks > 0).length },
+            { label: 'Auditores sin feedback', value: sinFeedback, warn: sinFeedback > 0 },
+            { label: 'Agentes con feedback', value: new Set(detalle.map((r) => r.agente_id)).size },
           ].map((k) => (
             <div key={k.label} className="bg-white rounded-xl border border-slate-200 p-4">
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{k.label}</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{k.value}</p>
+              <p className={`text-2xl font-bold mt-1 ${k.warn ? 'text-amber-600' : 'text-slate-900'}`}>{k.value}</p>
             </div>
           ))}
         </div>
@@ -155,28 +301,36 @@ export default function SeguimientoFeedback() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {data.auditores.length === 0 && (
+                {auditores.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-10 text-center text-slate-400">
-                      Nadie ha entregado feedback en el rango seleccionado.
-                    </td>
+                    <td colSpan={5} className="px-4 py-10 text-center text-slate-400">Sin auditores para los filtros seleccionados.</td>
                   </tr>
                 )}
-                {data.auditores.map((a) => (
-                  <tr
-                    key={a.auditor_id}
-                    onClick={() => setAuditorId(auditorId === a.auditor_id ? null : a.auditor_id)}
-                    className={`cursor-pointer transition-colors ${auditorId === a.auditor_id ? 'bg-blue-50' : 'hover:bg-slate-50'}`}
-                  >
-                    <td className="px-4 py-3 text-slate-800 font-medium">{a.auditor_nombre}</td>
-                    <td className="px-4 py-3 text-right text-slate-700">{a.feedbacks}</td>
-                    <td className="px-4 py-3 text-right text-slate-700">{a.agentes}</td>
-                    <td className="px-4 py-3 text-right">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${scoreBadge(a.promedio_puntaje)}`}>{a.promedio_puntaje}</span>
-                    </td>
-                    <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{formatDateTime(a.ultimo)}</td>
-                  </tr>
-                ))}
+                {auditores.map((a) => {
+                  const id = String(a.auditor_id);
+                  return (
+                    <tr
+                      key={id}
+                      onClick={() => setAuditorId(auditorId === id ? '' : id)}
+                      className={`cursor-pointer transition-colors ${auditorId === id ? 'bg-blue-50' : 'hover:bg-slate-50'}`}
+                    >
+                      <td className="px-4 py-3 text-slate-800 font-medium">
+                        {a.auditor_nombre}
+                        {a.feedbacks === 0 && (
+                          <span className="ml-2 inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-700">Sin feedback</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right text-slate-700">{a.feedbacks}</td>
+                      <td className="px-4 py-3 text-right text-slate-700">{a.agentes}</td>
+                      <td className="px-4 py-3 text-right">
+                        {a.promedio_puntaje == null
+                          ? <span className="text-slate-300">—</span>
+                          : <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${scoreBadge(a.promedio_puntaje)}`}>{a.promedio_puntaje}</span>}
+                      </td>
+                      <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">{formatDateTime(a.ultimo)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -187,7 +341,7 @@ export default function SeguimientoFeedback() {
                 Detalle de entregas{selectedAuditor ? ` — ${selectedAuditor.auditor_nombre}` : ''} ({detalle.length})
               </span>
               {selectedAuditor && (
-                <button onClick={() => setAuditorId(null)} className="text-xs text-blue-600 hover:text-blue-800">
+                <button onClick={() => setAuditorId('')} className="text-xs text-blue-600 hover:text-blue-800">
                   Ver todos los auditores
                 </button>
               )}
@@ -206,7 +360,7 @@ export default function SeguimientoFeedback() {
               <tbody className="divide-y divide-slate-100">
                 {detalle.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-10 text-center text-slate-400">Sin entregas para mostrar.</td>
+                    <td colSpan={6} className="px-4 py-10 text-center text-slate-400">Sin entregas para los filtros seleccionados.</td>
                   </tr>
                 )}
                 {detalle.map((r) => (
