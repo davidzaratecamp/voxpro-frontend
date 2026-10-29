@@ -39,6 +39,7 @@ const EMPTY_FORM = {
   client_codes: [],
   active: true,
   voicebot_read_only: false,
+  feedback_monitor: false,
 };
 
 // ─── Modal ──────────────────────────────────────────────────────────────────
@@ -189,6 +190,21 @@ function UserModal({ user, onClose, onSaved }) {
               />
               <span className="text-sm text-slate-700">
                 Solo lectura <span className="text-slate-400">(ve las campañas pero no puede editar prompts ni activar/detener la auditoría automática)</span>
+              </span>
+            </label>
+          )}
+
+          {/* Monitorear feedback (cualquier rol; gestor_usuarios ya lo ve todo) */}
+          {form.role !== 'gestor_usuarios' && (
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!!form.feedback_monitor}
+                onChange={(e) => setField('feedback_monitor', e.target.checked)}
+                className="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-400"
+              />
+              <span className="text-sm text-slate-700">
+                Monitorear feedback <span className="text-slate-400">(ve qué auditores entregaron feedback, cuántos y a qué agentes, en sus campañas de Claro)</span>
               </span>
             </label>
           )}
@@ -423,6 +439,11 @@ export default function Usuarios() {
                       {u.role === 'auditor_ia' && u.voicebot_read_only && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
                           Solo lectura
+                        </span>
+                      )}
+                      {!!u.feedback_monitor && u.role !== 'gestor_usuarios' && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-600">
+                          Monitorea feedback
                         </span>
                       )}
                     </div>
