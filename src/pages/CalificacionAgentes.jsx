@@ -48,6 +48,15 @@ function allowedClientCodes(user) {
   return CLIENT_CODES.filter((c) => user?.client_codes?.includes(c));
 }
 
+async function blobErrorMessage(err, fallback) {
+  try {
+    const text = await err.response.data.text();
+    return JSON.parse(text).message || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 function Trend({ actual, anterior }) {
   if (actual == null || anterior == null) return <span className="text-slate-300">—</span>;
   const diff = Math.round((actual - anterior) * 10) / 10;
@@ -234,6 +243,7 @@ export default function CalificacionAgentes() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selected, setSelected] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   const weekLabel = weeks.find((w) => w.value === week)?.label.replace(' (actual)', '') || week;
 
@@ -252,6 +262,26 @@ export default function CalificacionAgentes() {
   }, [week, clientCode]);
 
   useEffect(() => { load(); }, [load]);
+
+  const handleExport = async () => {
+    setExporting(true);
+    setError(null);
+    try {
+      const res = await sofiaHumanApi.exportAgentWeekly({ week, client_code: clientCode });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Calificacion_agentes_${CLIENT_LABELS[clientCode].replace(' ', '_')}_semana_${week}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      setError(await blobErrorMessage(err, 'No se pudo generar el Excel. Intenta de nuevo.'));
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -305,6 +335,13 @@ export default function CalificacionAgentes() {
             placeholder="Buscar agente por nombre o cédula..."
             className="flex-1 min-w-[180px] rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all"
           />
+          <button
+            onClick={handleExport}
+            disabled={!clientCode || loading || exporting || !data?.agentes?.length}
+            className="px-4 py-2 text-sm font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+          >
+            {exporting ? 'Generando Excel...' : 'Exportar Excel'}
+          </button>
         </div>
       </div>
 
