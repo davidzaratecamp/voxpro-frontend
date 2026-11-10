@@ -8,7 +8,7 @@ const GROUPS = [
   { key: 'obama',         label: 'Obama',         campaigns: ['obama_ventas', 'obama_customer'] },
   { key: 'lv',           label: 'Vital',          campaigns: ['lv_ventas', 'lv_customer'] },
   { key: 'reclutamiento', label: 'Reclutamiento', campaigns: ['reclutamiento'] },
-  { key: 'obama_vital',   label: 'Obama Vital',   campaigns: ['obama_vital_bienvenida', 'obama_vital_customer'] },
+  { key: 'obama_vital',   label: 'Obama Vital',   campaigns: ['obama_vital_bienvenida', 'obama_vital_ventas', 'obama_vital_customer'] },
 ];
 
 // Qué client_code necesita cada campaña para ser visible
@@ -25,6 +25,7 @@ const CAMPAIGN_CLIENT = {
   lv_customer:    'lv',
   reclutamiento:  'reclutamiento',
   obama_vital_bienvenida: 'obama_vital',
+  obama_vital_ventas:     'obama_vital',
   obama_vital_customer:   'obama_vital',
 };
 

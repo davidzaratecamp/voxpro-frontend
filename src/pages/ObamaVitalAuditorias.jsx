@@ -93,7 +93,7 @@ export default function ObamaVitalAuditorias() {
       <div>
         <h2 className="text-xl font-semibold text-slate-800">Obama Vital</h2>
         <p className="text-sm text-slate-500 mt-1">
-          Llamadas de Bienvenida (outbound) y ObamaCus (inbound), por Aware y por Zoom. Selecciona una llamada, precalifícala con IA y confirma o corrige la calificación.
+          Llamadas de Bienvenida y Ventas (outbound) y ObamaCus (inbound), por Aware y por Zoom. Selecciona una llamada, precalifícala con IA y confirma o corrige la calificación.
         </p>
       </div>
 

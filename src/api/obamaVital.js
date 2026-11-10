@@ -18,6 +18,7 @@ export const obamaVitalApi = {
 
 export const OBAMA_VITAL_CAMPAIGNS = [
   { value: 'bienvenida', label: 'Bienvenida' },
+  { value: 'ventas',     label: 'Ventas' },
   { value: 'customer',   label: 'ObamaCus' },
 ];
 
