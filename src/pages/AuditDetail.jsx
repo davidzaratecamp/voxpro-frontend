@@ -43,6 +43,7 @@ export default function AuditDetail() {
   // Audio player state
   const [audioUrl, setAudioUrl] = useState(null);
   const [audioLoading, setAudioLoading] = useState(false);
+  const [audioError, setAudioError] = useState(null);
   const audioRef = useRef(null);
   const manualFormRef = useRef(null);
 
@@ -103,15 +104,19 @@ export default function AuditDetail() {
 
   const handleLoadAudio = async () => {
     setAudioLoading(true);
+    setAudioError(null);
     try {
       const res = await client.get(`/audit/selections/${id}/audio`, {
         responseType: 'blob',
-        timeout: 60000,
+        timeout: 180000,
       });
       const url = URL.createObjectURL(res.data);
       setAudioUrl(url);
     } catch (err) {
       console.error('Error loading audio:', err);
+      setAudioError(err.code === 'ECONNABORTED'
+        ? 'La grabación tardó demasiado en descargar. Revisa tu conexión e intenta de nuevo.'
+        : 'No se pudo cargar la grabación. Intenta de nuevo.');
     } finally {
       setAudioLoading(false);
     }
@@ -294,7 +299,11 @@ export default function AuditDetail() {
                 </>
               )}
             </button>
-          ) : (
+          ) : null}
+          {!audioUrl && audioError && (
+            <p className="mt-2 text-sm text-red-600">{audioError}</p>
+          )}
+          {audioUrl && (
             <div className="flex items-center gap-3">
               <audio ref={audioRef} controls src={audioUrl} className="flex-1 h-10" />
               <button
